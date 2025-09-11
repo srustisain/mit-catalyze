@@ -1,4 +1,3 @@
-
 import os
 from dotenv import load_dotenv
 
@@ -23,3 +22,43 @@ PUBCHEM_BASE_URL = "https://pubchem.ncbi.nlm.nih.gov/rest/pug"
 # App settings
 APP_TITLE = "Catalyze - AI-Powered Chemistry Assistant"
 APP_DESCRIPTION = "Transform research questions into lab protocols and automation scripts"
+
+# ----------------------------------------------------------------------
+# MCP SERVER REGISTRY
+# ----------------------------------------------------------------------
+# Supports both HTTP-based (streamable_http) and stdio-based MCP servers
+# Format: {"server_name": {"transport": "stdio|streamable_http", ...}}
+# 
+# For stdio servers:
+#   {"transport": "stdio", "command": "python", "args": ["/path/to/server.py"]}
+#
+# For HTTP servers:
+#   {"transport": "streamable_http", "url": "http://localhost:8000/mcp"}
+#
+MCP_SERVERS = {
+    # Example HTTP-based MCP servers
+    "chembl": {
+        "transport": "streamable_http",
+        "url": "http://localhost:8000/mcp"
+    },
+    "literature": {
+        "transport": "streamable_http", 
+        "url": "http://localhost:8001/mcp"
+    },
+    "knowledge_graph": {
+        "transport": "streamable_http",
+        "url": "http://localhost:8002/mcp"
+    },
+    
+    # Example stdio-based MCP servers
+    "local_math": {
+        "transport": "stdio",
+        "command": "python",
+        "args": ["./examples/math_server.py"]
+    },
+    "local_chem": {
+        "transport": "stdio", 
+        "command": "python",
+        "args": ["./examples/chem_server.py"]
+    }
+}

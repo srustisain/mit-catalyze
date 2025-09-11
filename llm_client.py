@@ -87,6 +87,7 @@ class LLMClient:
         return response.json()["choices"][0]["message"]["content"]
     
     def _call_huggingface_api(self, prompt: str) -> str:
+        print("Got here")
         """Call Hugging Face API"""
         url = f"https://api-inference.huggingface.co/models/{HUGGINGFACE_MODEL}"
         headers = {

@@ -1,0 +1,39 @@
+{
+  "timestamp": "2025-09-11T14:49:06.929231",
+  "basic_tests": [
+    [
+      "\u2705 Module imports",
+      "Success"
+    ],
+    [
+      "\u2705 LLM Client init",
+      "Provider: cerebras"
+    ],
+    [
+      "\u2705 PubChem extraction",
+      "Found 1 chemicals"
+    ],
+    [
+      "\u2705 PubChem data",
+      "Retrieved data for benzyl alcohol"
+    ],
+    [
+      "OpenAI API key",
+      "Missing"
+    ],
+    [
+      "Cerebras API key",
+      "Available"
+    ],
+    [
+      "HuggingFace API key",
+      "Available"
+    ]
+  ],
+  "pipeline_success": false,
+  "summary": {
+    "basic_tests_passed": 4,
+    "basic_tests_total": 7,
+    "pipeline_success": false
+  }
+}

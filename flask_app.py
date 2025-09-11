@@ -10,8 +10,9 @@ from pubchem_client import PubChemClient
 from llm_client import LLMClient
 from protocol_generator import ProtocolGenerator
 from automation_generator import AutomationGenerator
+from src.pipeline import run_pipeline
 
-app = Flask(__name__, static_folder='react-build', static_url_path='')
+app = Flask(__name__, static_folder='build', static_url_path='')
 CORS(app)
 
 # Initialize services
@@ -44,60 +45,18 @@ def process_chemistry_query():
         data = request.get_json()
         query = data.get('query', '').strip()
         explain_mode = data.get('explain_mode', False)
-        
+
         if not query:
             return jsonify({'error': 'Query is required'}), 400
-        
-        # Step 1: Extract chemicals from query
-        chemicals = pubchem_client.extract_chemicals(query)
-        
-        # Step 2: Get PubChem data
-        chemical_data = {}
-        for chemical in chemicals:
-            data = pubchem_client.get_chemical_data(chemical)
-            if data:
-                chemical_data[chemical] = data
-        
-        # Step 3: Generate protocol using LLM
-        protocol = protocol_generator.generate_protocol(
-            query, chemical_data, explain_mode
-        )
-        
-        # Step 4: Generate automation script
-        automation_script = automation_generator.generate_script(
-            protocol, chemical_data
-        )
-        
-        # Step 5: Get safety information
-        safety_info = protocol_generator.get_safety_info(chemical_data)
-        
-        # Create response
-        response = {
-            'query': query,
-            'timestamp': datetime.now().isoformat(),
-            'chemicals': chemicals,
-            'chemical_data': chemical_data,
-            'protocol': protocol,
-            'automation_script': automation_script,
-            'safety_info': safety_info,
-            'analysis': {
-                'chemicals_found': len(chemical_data),
-                'protocol_steps': len(protocol.get('steps', [])),
-                'safety_hazards': len(safety_info.get('hazards', [])),
-                'automation_operations': automation_script.count('transfer(') + automation_script.count('mix(')
-            }
-        }
-        
-        # Add to conversation history
-        conversation_history.append({
-            'id': len(conversation_history) + 1,
-            'query': query,
-            'response': response,
-            'timestamp': datetime.now().isoformat()
-        })
-        
+
+        # Delegate the entire workflow to the new LangGraph‑based pipeline.
+        # The pipeline handles chemical extraction, PubChem lookup,
+        # MCP tool orchestration, automation script generation, and
+        # response assembly.
+        response = run_pipeline(query, explain_mode=explain_mode)
+
         return jsonify(response)
-        
+
     except Exception as e:
         return jsonify({'error': f'Error processing query: {str(e)}'}), 500
 
