@@ -2,16 +2,31 @@ import openai
 from typing import Dict, List, Optional, Any
 import json
 import re
-from config import OPENAI_API_KEY
+import requests
+from config import OPENAI_API_KEY, CEREBRAS_API_KEY, HUGGINGFACE_API_KEY, LLM_PROVIDER, OPENAI_MODEL, CEREBRAS_MODEL, HUGGINGFACE_MODEL
 
 class LLMClient:
     """Client for interacting with LLM APIs"""
     
-    def __init__(self):
-        if OPENAI_API_KEY:
-            openai.api_key = OPENAI_API_KEY
-        else:
-            print("Warning: OpenAI API key not found. LLM features will be limited.")
+    def __init__(self, provider: str = None):
+        """
+        Initialize LLM client with specified provider or default from config
+        
+        Args:
+            provider (str): LLM provider to use ('openai', 'cerebras', 'huggingface')
+        """
+        self.provider = provider or LLM_PROVIDER or "openai"
+        self.openai_key = OPENAI_API_KEY
+        self.cerebras_key = CEREBRAS_API_KEY
+        self.huggingface_key = HUGGINGFACE_API_KEY
+        
+        # Initialize OpenAI client if key is available
+        if self.openai_key:
+            openai.api_key = self.openai_key
+    
+    def set_provider(self, provider: str) -> None:
+        """Set the LLM provider to use"""
+        self.provider = provider
     
     def generate_protocol(self, query: str, chemical_data: Dict[str, Any], explain_mode: bool = False) -> Dict[str, Any]:
         """Generate a chemical protocol from a query"""
@@ -20,9 +35,9 @@ class LLMClient:
         prompt = self._create_protocol_prompt(query, chemical_data, explain_mode)
         
         try:
-            if OPENAI_API_KEY:
+            if self.provider == "openai" and self.openai_key:
                 response = openai.ChatCompletion.create(
-                    model="gpt-3.5-turbo",
+                    model=OPENAI_MODEL,
                     messages=[
                         {"role": "system", "content": "You are a chemistry expert who generates detailed laboratory protocols."},
                         {"role": "user", "content": prompt}
@@ -33,13 +48,63 @@ class LLMClient:
                 
                 content = response.choices[0].message.content
                 return self._parse_protocol_response(content, explain_mode)
+            
+            elif self.provider == "cerebras" and self.cerebras_key:
+                response = self._call_cerebras_api(prompt)
+                return self._parse_protocol_response(response, explain_mode)
+            
+            elif self.provider == "huggingface" and self.huggingface_key:
+                response = self._call_huggingface_api(prompt)
+                return self._parse_protocol_response(response, explain_mode)
+            
             else:
                 # Fallback to demo data
                 return self._get_demo_protocol(query, chemical_data, explain_mode)
                 
         except Exception as e:
-            print(f"Error generating protocol: {e}")
+            print(f"Error generating protocol with {self.provider}: {e}")
             return self._get_demo_protocol(query, chemical_data, explain_mode)
+    
+    def _call_cerebras_api(self, prompt: str) -> str:
+        """Call Cerebras API"""
+        url = "https://api.cerebras.ai/v1/chat/completions"
+        headers = {
+            "Authorization": f"Bearer {self.cerebras_key}",
+            "Content-Type": "application/json"
+        }
+        data = {
+            "model": CEREBRAS_MODEL,
+            "messages": [
+                {"role": "system", "content": "You are a chemistry expert who generates detailed laboratory protocols."},
+                {"role": "user", "content": prompt}
+            ],
+            "max_tokens": 1500,
+            "temperature": 0.3
+        }
+        
+        response = requests.post(url, headers=headers, json=data)
+        response.raise_for_status()
+        return response.json()["choices"][0]["message"]["content"]
+    
+    def _call_huggingface_api(self, prompt: str) -> str:
+        """Call Hugging Face API"""
+        url = f"https://api-inference.huggingface.co/models/{HUGGINGFACE_MODEL}"
+        headers = {
+            "Authorization": f"Bearer {self.huggingface_key}",
+            "Content-Type": "application/json"
+        }
+        data = {
+            "inputs": prompt,
+            "parameters": {
+                "max_new_tokens": 1500,
+                "temperature": 0.3,
+                "return_full_text": False
+            }
+        }
+        
+        response = requests.post(url, headers=headers, json=data)
+        response.raise_for_status()
+        return response.json()[0]["generated_text"]
     
     def _create_protocol_prompt(self, query: str, chemical_data: Dict[str, Any], explain_mode: bool) -> str:
         """Create a detailed prompt for protocol generation"""
@@ -73,13 +138,7 @@ Format your response as JSON with the following structure:
     "title": "Protocol title",
     "reaction": "Chemical equation",
     "steps": [
-        {{
-            "title": "Step title",
-            "description": "Detailed description",
-            "reagents": "List of reagents and quantities",
-            "conditions": "Temperature, time, etc.",
-            "time": "Duration"
-        }}
+        {{"title": "Step title", "description": "Detailed description", "reagents": "List of reagents and quantities", "conditions": "Temperature, time, etc.", "time": "Duration"}}
     ],
     "expected_yield": "Expected yield percentage",
     "explanation": "Chemical explanation (if explain_mode is true)",
@@ -240,34 +299,47 @@ Format your response as JSON with the following structure:
     def explain_reaction(self, reaction: str) -> str:
         """Explain a chemical reaction in simple terms"""
         try:
-            if OPENAI_API_KEY:
+            prompt = f"Explain this reaction in simple terms: {reaction}"
+            
+            if self.provider == "openai" and self.openai_key:
                 response = openai.ChatCompletion.create(
-                    model="gpt-3.5-turbo",
+                    model=OPENAI_MODEL,
                     messages=[
                         {"role": "system", "content": "You are a chemistry teacher who explains reactions in simple, clear terms."},
-                        {"role": "user", "content": f"Explain this reaction in simple terms: {reaction}"}
+                        {"role": "user", "content": prompt}
                     ],
                     max_tokens=300,
                     temperature=0.3
                 )
                 
                 return response.choices[0].message.content
+            
+            elif self.provider == "cerebras" and self.cerebras_key:
+                response = self._call_cerebras_api(prompt)
+                return response
+            
+            elif self.provider == "huggingface" and self.huggingface_key:
+                response = self._call_huggingface_api(prompt)
+                return response
+            
             else:
                 return "This is a chemical reaction. The reactants combine to form products under specific conditions."
                 
         except Exception as e:
-            print(f"Error explaining reaction: {e}")
+            print(f"Error explaining reaction with {self.provider}: {e}")
             return "This is a chemical reaction. The reactants combine to form products under specific conditions."
     
     def validate_protocol(self, protocol: str) -> Dict[str, Any]:
         """Validate a protocol for completeness and safety"""
         try:
-            if OPENAI_API_KEY:
+            prompt = f"Validate this protocol for completeness and safety: {protocol}"
+            
+            if self.provider == "openai" and self.openai_key:
                 response = openai.ChatCompletion.create(
-                    model="gpt-3.5-turbo",
+                    model=OPENAI_MODEL,
                     messages=[
                         {"role": "system", "content": "You are a safety expert who validates laboratory protocols."},
-                        {"role": "user", "content": f"Validate this protocol for completeness and safety: {protocol}"}
+                        {"role": "user", "content": prompt}
                     ],
                     max_tokens=500,
                     temperature=0.3
@@ -279,6 +351,23 @@ Format your response as JSON with the following structure:
                     "warnings": [],
                     "suggestions": [content]
                 }
+            
+            elif self.provider == "cerebras" and self.cerebras_key:
+                response = self._call_cerebras_api(prompt)
+                return {
+                    "valid": True,
+                    "warnings": [],
+                    "suggestions": [response]
+                }
+            
+            elif self.provider == "huggingface" and self.huggingface_key:
+                response = self._call_huggingface_api(prompt)
+                return {
+                    "valid": True,
+                    "warnings": [],
+                    "suggestions": [response]
+                }
+            
             else:
                 return {
                     "valid": True,
@@ -287,11 +376,42 @@ Format your response as JSON with the following structure:
                 }
                 
         except Exception as e:
-            print(f"Error validating protocol: {e}")
+            print(f"Error validating protocol with {self.provider}: {e}")
             return {
                 "valid": False,
                 "warnings": ["Validation failed"],
                 "suggestions": ["Review protocol manually"]
             }
-
-
+    
+    def generate_response(self, prompt: str, system_message: str = "You are a helpful chemistry assistant.") -> str:
+        """Generate a response from the LLM - used by ProtocolGenerator"""
+        try:
+            if self.provider == "openai" and self.openai_key:
+                response = openai.ChatCompletion.create(
+                    model=OPENAI_MODEL,
+                    messages=[
+                        {"role": "system", "content": system_message},
+                        {"role": "user", "content": prompt}
+                    ],
+                    max_tokens=1000,
+                    temperature=0.3
+                )
+                
+                return response.choices[0].message.content
+            
+            elif self.provider == "cerebras" and self.cerebras_key:
+                full_prompt = f"{system_message}\n\n{prompt}"
+                response = self._call_cerebras_api(full_prompt)
+                return response
+            
+            elif self.provider == "huggingface" and self.huggingface_key:
+                full_prompt = f"{system_message}\n\n{prompt}"
+                response = self._call_huggingface_api(full_prompt)
+                return response
+            
+            else:
+                return "LLM service not available. Please configure API keys."
+                
+        except Exception as e:
+            print(f"Error generating response with {self.provider}: {e}")
+            return "Error generating response. Please try again."

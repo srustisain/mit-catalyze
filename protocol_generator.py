@@ -397,5 +397,3 @@ class ProtocolGenerator:
                     highlights.append(f"{chemical} is flammable - keep away from heat")
         
         return highlights[:3]  # Return top 3 safety highlights
-
-
