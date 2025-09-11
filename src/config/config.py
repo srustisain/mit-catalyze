@@ -33,32 +33,35 @@ APP_DESCRIPTION = "Transform research questions into lab protocols and automatio
 #   {"transport": "stdio", "command": "python", "args": ["/path/to/server.py"]}
 #
 # For HTTP servers:
-#   {"transport": "streamable_http", "url": "http://localhost:8000/mcp"}
+#   {"transport": "streamable_http", "url": "http://localhost:8000"}
 #
 MCP_SERVERS = {
-    # Example HTTP-based MCP servers
+    # ChEMBL MCP Server (stdio-based)
     "chembl": {
-        "transport": "streamable_http",
-        "url": "http://localhost:8000/mcp"
-    },
-    "literature": {
-        "transport": "streamable_http", 
-        "url": "http://localhost:8001/mcp"
-    },
-    "knowledge_graph": {
-        "transport": "streamable_http",
-        "url": "http://localhost:8002/mcp"
+        "transport": "stdio",
+        "command": "node",
+        "args": ["mcp_servers/chembl-mcp-server/build/index.js"]
     },
     
+    # Example HTTP-based MCP servers (commented out for now)
+    # "literature": {
+    #     "transport": "streamable_http", 
+    #     "url": "http://localhost:8001/mcp"
+    # },
+    # "knowledge_graph": {
+    #     "transport": "streamable_http",
+    #     "url": "http://localhost:8002/mcp"
+    # },
+    
     # Example stdio-based MCP servers
-    "local_math": {
-        "transport": "stdio",
-        "command": "python",
-        "args": ["./examples/math_server.py"]
-    },
-    "local_chem": {
-        "transport": "stdio", 
-        "command": "python",
-        "args": ["./examples/chem_server.py"]
-    }
+    # "local_math": {
+    #     "transport": "stdio",
+    #     "command": "python",
+    #     "args": ["./examples/math_server.py"]
+    # },
+    # "local_chem": {
+    #     "transport": "stdio", 
+    #     "command": "python",
+    #     "args": ["./examples/chem_server.py"]
+    # }
 }

@@ -1,0 +1,3 @@
+[submodule "mcp_servers/chembl-mcp-server"]
+	path = mcp_servers/chembl-mcp-server
+	url = https://github.com/Augmented-Nature/ChEMBL-MCP-Server.git

@@ -33,7 +33,7 @@ def health_check():
 
 @app.route('/api/chat', methods=['POST'])
 def chat_with_llm():
-    """Chat with LLM using Hugging Face API"""
+    """Chat with LLM using OpenAI + ChEMBL MCP Server"""
     try:
         data = request.get_json()
         message = data.get('message', '').strip()
@@ -42,18 +42,83 @@ def chat_with_llm():
         if not message:
             return jsonify({'error': 'Message is required'}), 400
 
-        # Import LLM client
-        from src.clients.llm_client import LLMClient
+        # Check if this is a chemistry-related question that should use MCP
+        chemistry_keywords = [
+            'molecular weight', 'compound', 'chemical', 'drug', 'molecule',
+            'aspirin', 'caffeine', 'ibuprofen', 'target', 'receptor',
+            'bioactivity', 'admet', 'solubility', 'pharmacology',
+            'synthesis', 'reaction', 'mechanism', 'pathway'
+        ]
         
-        # Initialize LLM client with OpenAI
-        llm_client = LLMClient(provider="openai")
+        message_lower = message.lower()
+        is_chemistry_question = any(keyword in message_lower for keyword in chemistry_keywords)
         
-        # Generate response using the LLM
-        response = llm_client.generate_chat_response(message, conversation_history)
+        if is_chemistry_question:
+            # Use hybrid approach: OpenAI + ChEMBL MCP
+            print(f"🧪 Chemistry question detected: {message}")
+            
+            # First, get OpenAI response
+            from src.clients.llm_client import LLMClient
+            llm_client = LLMClient(provider="openai")
+            openai_response = llm_client.generate_chat_response(message, conversation_history)
+            print(f"✅ OpenAI response generated: {len(openai_response)} characters")
+            
+            # Then try to enhance with ChEMBL data
+            chembl_enhancement = ""
+            try:
+                from src.pipeline import run_pipeline
+                print("🔍 Attempting ChEMBL MCP integration...")
+                
+                # Run the MCP pipeline
+                result = run_pipeline(message, explain_mode=True)
+                print(f"📊 MCP result keys: {list(result.keys())}")
+                
+                # Extract ChEMBL data
+                enhancement_parts = []
+                
+                if result.get('chemicals') and len(result['chemicals']) > 0:
+                    chemicals = result['chemicals']
+                    enhancement_parts.append(f"ChEMBL Database: Found {len(chemicals)} chemicals: {', '.join(chemicals)}")
+                    print(f"🧪 Found chemicals: {chemicals}")
+                
+                if result.get('chemical_data'):
+                    for chem, data in result['chemical_data'].items():
+                        if data.get('molecular_weight'):
+                            enhancement_parts.append(f"ChEMBL Data: {chem} molecular weight = {data['molecular_weight']} g/mol")
+                            print(f"⚖️  {chem} MW: {data['molecular_weight']} g/mol")
+                        if data.get('formula'):
+                            enhancement_parts.append(f"ChEMBL Data: {chem} formula = {data['formula']}")
+                            print(f"🧬 {chem} formula: {data['formula']}")
+                
+                if result.get('protocol') and result['protocol']:
+                    protocol = result['protocol']
+                    if protocol.get('title'):
+                        enhancement_parts.append(f"ChEMBL Protocol: {protocol['title']}")
+                        print(f"📋 Protocol: {protocol['title']}")
+                
+                if enhancement_parts:
+                    chembl_enhancement = "\n\n**Additional ChEMBL Database Information:**\n" + "\n".join(enhancement_parts)
+                    print(f"✅ ChEMBL enhancement added: {len(chembl_enhancement)} characters")
+                else:
+                    print("⚠️  No ChEMBL data extracted")
+                
+            except Exception as mcp_error:
+                print(f"❌ MCP pipeline error: {mcp_error}")
+                chembl_enhancement = "\n\n(Note: ChEMBL database access temporarily unavailable)"
+            
+            # Combine OpenAI response with ChEMBL enhancement
+            response = openai_response + chembl_enhancement
+            print(f"🎯 Final response length: {len(response)} characters")
+        else:
+            # Use basic LLM for non-chemistry questions
+            from src.clients.llm_client import LLMClient
+            llm_client = LLMClient(provider="openai")
+            response = llm_client.generate_chat_response(message, conversation_history)
         
         return jsonify({
             'response': response,
-            'timestamp': datetime.now().isoformat()
+            'timestamp': datetime.now().isoformat(),
+            'used_mcp': is_chemistry_question
         })
 
     except Exception as e:
