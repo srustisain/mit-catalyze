@@ -1,5 +1,5 @@
 import sys 
-sys.path.insert(0, '.')
+sys.path.insert(0, '..')
 
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS

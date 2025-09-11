@@ -771,11 +771,18 @@
             }
 
             // Chat functions
-            function addMessage(content, isUser = false) {
+            function addMessage(content, isUser = false, isLoading = false) {
                 const messageDiv = document.createElement('div');
                 messageDiv.className = `mb-4 ${isUser ? 'ml-auto max-w-md' : ''}`;
+                
+                // Generate unique ID for loading messages
+                const messageId = isLoading ? 'loading-' + Date.now() : null;
+                if (messageId) {
+                    messageDiv.id = messageId;
+                }
+                
                 messageDiv.innerHTML = `
-                    <div class="bg-gray-100 dark:bg-gray-700 rounded-lg p-4 ${isUser ? 'bg-blue-100 dark:bg-blue-900' : ''}">
+                    <div class="bg-gray-100 dark:bg-gray-700 rounded-lg p-4 ${isUser ? 'bg-blue-100 dark:bg-blue-900' : ''} ${isLoading ? 'animate-pulse' : ''}">
                         <p class="text-gray-900 dark:text-white">${content}</p>
                     </div>
                 `;
@@ -801,6 +808,8 @@
                         saveChatHistory();
                     }
                 }
+                
+                return messageId;
             }
 
             function updateStats() {
@@ -808,7 +817,7 @@
                 queryCount.textContent = messages.length;
             }
 
-            function sendMessage() {
+            async function sendMessage() {
                 const message = chatInput.value.trim();
                 if (message) {
                     // Create new chat if none exists
@@ -820,16 +829,119 @@
                     chatInput.value = '';
                     updateStats();
                     
-                    // Simulate bot response
-                    setTimeout(() => {
-                        const responses = {
-                            research: "Based on your research query, here's what I found...",
-                            protocol: "Here's a detailed protocol for your experiment...",
-                            automate: "I'll generate a Python script for lab automation...",
-                            safety: "Here are the safety guidelines for your procedure..."
-                        };
-                        addMessage(responses[currentMode] || "I understand your request. Let me help you with that.");
-                    }, 1000);
+                    // Show loading message
+                    const loadingId = addMessage("🤖 Thinking...", false, true);
+                    
+                    try {
+                        // Call the actual API
+                        const response = await fetch('/api/query', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                query: message,
+                                explain_mode: currentMode === 'research'
+                            })
+                        });
+                        
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        
+                        const data = await response.json();
+                        
+                        // Remove loading message
+                        const loadingElement = document.getElementById(loadingId);
+                        if (loadingElement) {
+                            loadingElement.remove();
+                        }
+                        
+                        // Display the response based on mode
+                        let responseText = "";
+                        
+                        if (currentMode === 'research') {
+                            responseText = data.explanation || "Here's what I found about your query...";
+                        } else if (currentMode === 'protocol') {
+                            responseText = data.protocol ? 
+                                `**Protocol Generated:**\n${JSON.stringify(data.protocol, null, 2)}` : 
+                                "Protocol generation in progress...";
+                        } else if (currentMode === 'automate') {
+                            responseText = data.automation_script ? 
+                                `**Automation Script:**\n\`\`\`python\n${data.automation_script}\n\`\`\`` : 
+                                "Automation script generation in progress...";
+                        } else if (currentMode === 'safety') {
+                            responseText = data.safety_info ? 
+                                `**Safety Information:**\n${JSON.stringify(data.safety_info, null, 2)}` : 
+                                "Safety analysis in progress...";
+                        }
+                        
+                        // Add the actual response
+                        addMessage(responseText || "I've processed your request successfully!");
+                        
+                        // Update tabs with data if available
+                        if (data.chemical_data) {
+                            updateChemicalData(data.chemical_data);
+                        }
+                        if (data.protocol) {
+                            updateProtocolData(data.protocol);
+                        }
+                        if (data.automation_script) {
+                            updateAutomationData(data.automation_script);
+                        }
+                        
+                    } catch (error) {
+                        console.error('Error calling API:', error);
+                        
+                        // Remove loading message
+                        const loadingElement = document.getElementById(loadingId);
+                        if (loadingElement) {
+                            loadingElement.remove();
+                        }
+                        
+                        // Show error message
+                        addMessage("Sorry, I encountered an error processing your request. Please try again.");
+                    }
+                }
+            }
+
+            // Helper functions for updating tabs with API data
+            function updateChemicalData(chemicalData) {
+                // Update the chemicals tab with the data from API
+                const chemicalsTab = document.getElementById('chemicals');
+                if (chemicalsTab && chemicalData) {
+                    let html = '<h3 class="text-lg font-semibold mb-4">Chemical Information</h3>';
+                    for (const [chemical, data] of Object.entries(chemicalData)) {
+                        html += `<div class="mb-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                            <h4 class="font-semibold text-blue-600 dark:text-blue-400">${chemical}</h4>
+                            <pre class="text-sm mt-2">${JSON.stringify(data, null, 2)}</pre>
+                        </div>`;
+                    }
+                    chemicalsTab.innerHTML = html;
+                }
+            }
+
+            function updateProtocolData(protocol) {
+                // Update the protocol tab with the data from API
+                const protocolTab = document.getElementById('protocol');
+                if (protocolTab && protocol) {
+                    let html = '<h3 class="text-lg font-semibold mb-4">Generated Protocol</h3>';
+                    html += `<div class="mb-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                        <pre class="text-sm">${JSON.stringify(protocol, null, 2)}</pre>
+                    </div>`;
+                    protocolTab.innerHTML = html;
+                }
+            }
+
+            function updateAutomationData(automationScript) {
+                // Update the automation tab with the script from API
+                const automationTab = document.getElementById('automation');
+                if (automationTab && automationScript) {
+                    let html = '<h3 class="text-lg font-semibold mb-4">Generated Automation Script</h3>';
+                    html += `<div class="mb-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                        <pre class="text-sm"><code class="language-python">${automationScript}</code></pre>
+                    </div>`;
+                    automationTab.innerHTML = html;
                 }
             }
 
