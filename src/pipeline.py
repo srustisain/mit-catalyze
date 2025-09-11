@@ -2,9 +2,9 @@ import asyncio
 import datetime
 from typing import Any, Dict, List
 
-from automation_generator import AutomationGenerator
-from pubchem_client import PubChemClient
-from config import MCP_SERVERS, OPENAI_MODEL
+from src.generators.automation_generator import AutomationGenerator
+from src.clients.pubchem_client import PubChemClient
+from src.config.config import MCP_SERVERS, OPENAI_MODEL
 from langchain_mcp_adapters.client import MultiServerMCPClient
 from langgraph.prebuilt import create_react_agent
 

@@ -340,5 +340,3 @@ def run(protocol: protocol_api.ProtocolContext):
                 return f"{minutes} minutes"
             else:
                 return f"{minutes} minutes {seconds} seconds"
-
-

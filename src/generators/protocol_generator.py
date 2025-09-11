@@ -1,5 +1,6 @@
 from typing import Dict, List, Optional, Any
-from llm_client import LLMClient
+import re
+from src.clients.llm_client import LLMClient
 
 class ProtocolGenerator:
     """Generates and manages chemical protocols"""
@@ -176,13 +177,11 @@ class ProtocolGenerator:
             time_str = step.get('time', '')
             if 'hour' in time_str.lower():
                 # Extract hours
-                import re
                 hours = re.findall(r'(\d+)\s*hour', time_str.lower())
                 if hours:
                     total_minutes += int(hours[0]) * 60
             elif 'minute' in time_str.lower():
                 # Extract minutes
-                import re
                 minutes = re.findall(r'(\d+)\s*minute', time_str.lower())
                 if minutes:
                     total_minutes += int(minutes[0])

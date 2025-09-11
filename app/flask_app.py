@@ -1,3 +1,6 @@
+import sys 
+sys.path.insert(0, '.')
+
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 import os
@@ -6,20 +9,10 @@ import json
 from datetime import datetime
 import re
 
-from pubchem_client import PubChemClient
-from llm_client import LLMClient
-from protocol_generator import ProtocolGenerator
-from automation_generator import AutomationGenerator
 from src.pipeline import run_pipeline
 
-app = Flask(__name__, static_folder='build', static_url_path='')
+app = Flask(__name__, static_folder='../react-build', static_url_path='')
 CORS(app)
-
-# Initialize services
-pubchem_client = PubChemClient()
-llm_client = LLMClient()
-protocol_generator = ProtocolGenerator()
-automation_generator = AutomationGenerator()
 
 # In-memory storage for conversation history (in production, use a database)
 conversation_history = []
@@ -134,90 +127,6 @@ def download_automation_script():
         
     except Exception as e:
         return jsonify({'error': f'Error generating script: {str(e)}'}), 500
-
-@app.route('/api/explain', methods=['POST'])
-def explain_chemistry():
-    """Generate simple explanations for chemistry concepts"""
-    try:
-        data = request.get_json()
-        query = data.get('query', '').strip()
-        chemical_data = data.get('chemical_data', {})
-        
-        if not query:
-            return jsonify({'error': 'Query is required'}), 400
-        
-        # Generate explanation using LLM
-        explanation = protocol_generator.explain_like_new(query, chemical_data)
-        
-        return jsonify({
-            'explanation': explanation,
-            'timestamp': datetime.now().isoformat()
-        })
-        
-    except Exception as e:
-        return jsonify({'error': f'Error generating explanation: {str(e)}'}), 500
-
-@app.route('/api/papers', methods=['POST'])
-def get_literature_papers():
-    """Get relevant literature papers for a query"""
-    try:
-        data = request.get_json()
-        query = data.get('query', '').strip()
-        
-        if not query:
-            return jsonify({'error': 'Query is required'}), 400
-        
-        # Generate mock papers data (in production, integrate with PubMed/arXiv)
-        papers = protocol_generator.get_relevant_papers(query)
-        
-        return jsonify({
-            'papers': papers,
-            'query': query,
-            'timestamp': datetime.now().isoformat()
-        })
-        
-    except Exception as e:
-        return jsonify({'error': f'Error fetching papers: {str(e)}'}), 500
-
-@app.route('/api/knowledge-graph', methods=['POST'])
-def generate_knowledge_graph():
-    """Generate knowledge graph for chemicals and reactions"""
-    try:
-        data = request.get_json()
-        chemical_data = data.get('chemical_data', {})
-        protocol = data.get('protocol', {})
-        
-        # Generate knowledge graph data
-        graph_data = protocol_generator.generate_knowledge_graph(chemical_data, protocol)
-        
-        return jsonify({
-            'graph': graph_data,
-            'timestamp': datetime.now().isoformat()
-        })
-        
-    except Exception as e:
-        return jsonify({'error': f'Error generating knowledge graph: {str(e)}'}), 500
-
-@app.route('/api/export', methods=['POST'])
-def export_protocol():
-    """Export protocol in various formats (PDF, Markdown)"""
-    try:
-        data = request.get_json()
-        protocol = data.get('protocol', {})
-        format_type = data.get('format', 'markdown')  # 'markdown' or 'pdf'
-        
-        if format_type == 'markdown':
-            content = protocol_generator.export_to_markdown(protocol)
-            return jsonify({
-                'content': content,
-                'format': 'markdown',
-                'filename': 'catalyze_protocol.md'
-            })
-        else:
-            return jsonify({'error': 'PDF export not yet implemented'}), 501
-        
-    except Exception as e:
-        return jsonify({'error': f'Error exporting protocol: {str(e)}'}), 500
 
 @app.errorhandler(404)
 def not_found(error):
