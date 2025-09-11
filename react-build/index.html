@@ -190,12 +190,33 @@
         }
         
         .delete-chat-btn {
-            opacity: 0;
-            transition: opacity 0.2s ease;
+            opacity: 1;
+            transition: all 0.2s ease;
+            padding: 4px 8px;
+            border-radius: 6px;
+            background-color: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            color: #dc2626;
+            min-width: 24px;
+            min-height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
         
         .chat-history-item:hover .delete-chat-btn {
-            opacity: 1;
+            background-color: rgba(239, 68, 68, 0.2);
+            border-color: rgba(239, 68, 68, 0.5);
+        }
+        
+        .delete-chat-btn:hover {
+            background-color: rgba(239, 68, 68, 0.3);
+            border-color: #dc2626;
+            color: #b91c1c;
+            transform: scale(1.1);
         }
         
         /* Dark mode styles */
@@ -714,7 +735,7 @@
                                 <h4 class="text-sm font-medium text-gray-900 dark:text-white truncate">${chat.name}</h4>
                                 <p class="text-xs text-gray-500 dark:text-gray-400">${new Date(chat.createdAt).toLocaleDateString()}</p>
                             </div>
-                            <button onclick="deleteChat('${chat.id}')" class="ml-2 text-gray-400 hover:text-red-500 text-xs">×</button>
+                            <button onclick="deleteChat('${chat.id}', event)" class="delete-chat-btn ml-2" title="Delete this chat">🗑️</button>
                         </div>
                     `;
                     
@@ -738,15 +759,29 @@
                 updateChatHistory();
             }
 
-            function deleteChat(chatId) {
-                if (confirm('Are you sure you want to delete this chat?')) {
+            function deleteChat(chatId, event) {
+                // Prevent event propagation to avoid triggering chat load
+                if (event) {
+                    event.stopPropagation();
+                }
+                
+                console.log('Deleting chat:', chatId);
+                console.log('Current chat history:', chatHistory.map(c => c.id));
+                
+                if (confirm(`Are you sure you want to delete "${chatHistory.find(c => c.id === chatId)?.name || chatId}"?`)) {
+                    const originalLength = chatHistory.length;
                     chatHistory = chatHistory.filter(c => c.id !== chatId);
+                    
+                    console.log(`Deleted chat ${chatId}. History length: ${originalLength} -> ${chatHistory.length}`);
                     
                     if (currentChatId === chatId) {
                         if (chatHistory.length > 0) {
                             loadChat(chatHistory[0].id);
                         } else {
-                            createNewChat();
+                            // Don't create a new chat automatically - just clear the current view
+                            currentChatId = null;
+                            chatMessages.innerHTML = '';
+                            document.querySelector('.chat-title').textContent = 'New Chat';
                         }
                     }
                     
