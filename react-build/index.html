@@ -355,8 +355,8 @@
             <div id="chatMessages" class="p-6 min-h-96">
                 <div class="text-center">
                     <div class="text-4xl mb-4 floating-animation">👋</div>
-                    <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-2">Welcome!</h3>
-                    <p class="text-gray-600 dark:text-gray-400 mb-4">I'm your AI chemistry assistant. Ask me about materials, reactions, protocols, or lab automation.</p>
+                    <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-2">Hello! I'm Catalyze</h3>
+                    <p class="text-gray-600 dark:text-gray-400 mb-4">Your AI chemistry assistant. I can help you with research questions, protocol generation, lab automation, and safety analysis.</p>
                     <p class="text-gray-600 dark:text-gray-400">What would you like to explore today?</p>
                 </div>
             </div>
@@ -691,9 +691,9 @@
                 // Clear current chat messages
                 chatMessages.innerHTML = `
                     <div class="text-center">
-                        <div class="text-4xl mb-4">👋</div>
-                        <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-2">Welcome!</h3>
-                        <p class="text-gray-600 dark:text-gray-400 mb-4">I'm your AI chemistry assistant. Ask me about materials, reactions, protocols, or lab automation.</p>
+                        <div class="text-4xl mb-4 floating-animation">👋</div>
+                        <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-2">Hello! I'm Catalyze</h3>
+                        <p class="text-gray-600 dark:text-gray-400 mb-4">Your AI chemistry assistant. I can help you with research questions, protocol generation, lab automation, and safety analysis.</p>
                         <p class="text-gray-600 dark:text-gray-400">What would you like to explore today?</p>
                     </div>
                 `;
@@ -833,15 +833,22 @@
                     const loadingId = addMessage("🤖 Thinking...", false, true);
                     
                     try {
-                        // Call the actual API
-                        const response = await fetch('/api/query', {
+                        // Get conversation history for context
+                        const chat = chatHistory.find(c => c.id === currentChatId);
+                        const conversationHistory = chat ? chat.messages.map(msg => ({
+                            role: msg.isUser ? "user" : "assistant",
+                            content: msg.content
+                        })) : [];
+                        
+                        // Call the chat API
+                        const response = await fetch('/api/chat', {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',
                             },
                             body: JSON.stringify({
-                                query: message,
-                                explain_mode: currentMode === 'research'
+                                message: message,
+                                conversation_history: conversationHistory
                             })
                         });
                         
@@ -857,38 +864,8 @@
                             loadingElement.remove();
                         }
                         
-                        // Display the response based on mode
-                        let responseText = "";
-                        
-                        if (currentMode === 'research') {
-                            responseText = data.explanation || "Here's what I found about your query...";
-                        } else if (currentMode === 'protocol') {
-                            responseText = data.protocol ? 
-                                `**Protocol Generated:**\n${JSON.stringify(data.protocol, null, 2)}` : 
-                                "Protocol generation in progress...";
-                        } else if (currentMode === 'automate') {
-                            responseText = data.automation_script ? 
-                                `**Automation Script:**\n\`\`\`python\n${data.automation_script}\n\`\`\`` : 
-                                "Automation script generation in progress...";
-                        } else if (currentMode === 'safety') {
-                            responseText = data.safety_info ? 
-                                `**Safety Information:**\n${JSON.stringify(data.safety_info, null, 2)}` : 
-                                "Safety analysis in progress...";
-                        }
-                        
-                        // Add the actual response
-                        addMessage(responseText || "I've processed your request successfully!");
-                        
-                        // Update tabs with data if available
-                        if (data.chemical_data) {
-                            updateChemicalData(data.chemical_data);
-                        }
-                        if (data.protocol) {
-                            updateProtocolData(data.protocol);
-                        }
-                        if (data.automation_script) {
-                            updateAutomationData(data.automation_script);
-                        }
+                        // Add the LLM response
+                        addMessage(data.response || "I've processed your request successfully!");
                         
                     } catch (error) {
                         console.error('Error calling API:', error);

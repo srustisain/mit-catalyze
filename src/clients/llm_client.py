@@ -1,9 +1,9 @@
-import openai
+from openai import OpenAI
 from typing import Dict, List, Optional, Any
 import json
 import re
 import requests
-from config import OPENAI_API_KEY, CEREBRAS_API_KEY, HUGGINGFACE_API_KEY, LLM_PROVIDER, OPENAI_MODEL, CEREBRAS_MODEL, HUGGINGFACE_MODEL
+from config.config import OPENAI_API_KEY, CEREBRAS_API_KEY, HUGGINGFACE_API_KEY, LLM_PROVIDER, OPENAI_MODEL, CEREBRAS_MODEL, HUGGINGFACE_MODEL
 
 class LLMClient:
     """Client for interacting with LLM APIs"""
@@ -22,7 +22,9 @@ class LLMClient:
         
         # Initialize OpenAI client if key is available
         if self.openai_key:
-            openai.api_key = self.openai_key
+            self.openai_client = OpenAI(api_key=self.openai_key)
+        else:
+            self.openai_client = None
     
     def set_provider(self, provider: str) -> None:
         """Set the LLM provider to use"""
@@ -35,8 +37,8 @@ class LLMClient:
         prompt = self._create_protocol_prompt(query, chemical_data, explain_mode)
         
         try:
-            if self.provider == "openai" and self.openai_key:
-                response = openai.ChatCompletion.create(
+            if self.provider == "openai" and self.openai_client:
+                response = self.openai_client.chat.completions.create(
                     model=OPENAI_MODEL,
                     messages=[
                         {"role": "system", "content": "You are a chemistry expert who generates detailed laboratory protocols."},
@@ -302,8 +304,8 @@ Format your response as JSON with the following structure:
         try:
             prompt = f"Explain this reaction in simple terms: {reaction}"
             
-            if self.provider == "openai" and self.openai_key:
-                response = openai.ChatCompletion.create(
+            if self.provider == "openai" and self.openai_client:
+                response = self.openai_client.chat.completions.create(
                     model=OPENAI_MODEL,
                     messages=[
                         {"role": "system", "content": "You are a chemistry teacher who explains reactions in simple, clear terms."},
@@ -335,8 +337,8 @@ Format your response as JSON with the following structure:
         try:
             prompt = f"Validate this protocol for completeness and safety: {protocol}"
             
-            if self.provider == "openai" and self.openai_key:
-                response = openai.ChatCompletion.create(
+            if self.provider == "openai" and self.openai_client:
+                response = self.openai_client.chat.completions.create(
                     model=OPENAI_MODEL,
                     messages=[
                         {"role": "system", "content": "You are a safety expert who validates laboratory protocols."},
@@ -384,11 +386,68 @@ Format your response as JSON with the following structure:
                 "suggestions": ["Review protocol manually"]
             }
     
+    def generate_chat_response(self, message: str, conversation_history: List[Dict[str, str]] = None) -> str:
+        """Generate a conversational response from the LLM"""
+        try:
+            # Build conversation context
+            system_message = "You are Catalyze, an AI chemistry assistant specializing in materials science and chemistry. You help with research questions, protocol generation, lab automation, and safety analysis. Be helpful, accurate, and conversational."
+            
+            if self.provider == "openai" and self.openai_client:
+                messages = [{"role": "system", "content": system_message}]
+                
+                # Add conversation history
+                if conversation_history:
+                    for msg in conversation_history[-10:]:  # Keep last 10 messages for context
+                        messages.append(msg)
+                
+                # Add current message
+                messages.append({"role": "user", "content": message})
+                
+                response = self.openai_client.chat.completions.create(
+                    model=OPENAI_MODEL,
+                    messages=messages,
+                    max_tokens=1000,
+                    temperature=0.7
+                )
+                
+                return response.choices[0].message.content
+            
+            elif self.provider == "cerebras" and self.cerebras_key:
+                # Build context for Cerebras
+                context = system_message
+                if conversation_history:
+                    for msg in conversation_history[-5:]:  # Keep last 5 messages for context
+                        role = "Human" if msg["role"] == "user" else "Assistant"
+                        context += f"\n{role}: {msg['content']}"
+                
+                context += f"\nHuman: {message}\nAssistant:"
+                response = self._call_cerebras_api(context)
+                return response
+            
+            elif self.provider == "huggingface" and self.huggingface_key:
+                # Build context for Hugging Face
+                context = f"{system_message}\n\n"
+                if conversation_history:
+                    for msg in conversation_history[-5:]:  # Keep last 5 messages for context
+                        role = "Human" if msg["role"] == "user" else "Assistant"
+                        context += f"{role}: {msg['content']}\n"
+                
+                context += f"Human: {message}\nAssistant:"
+                response = self._call_huggingface_api(context)
+                return response
+            
+            else:
+                return "I'm sorry, but I'm not able to respond right now. Please check if the LLM service is properly configured."
+                
+        except Exception as e:
+            print(f"Error generating chat response with {self.provider}: {e}")
+            return "I apologize, but I encountered an error while processing your message. Please try again."
+
     def generate_response(self, prompt: str, system_message: str = "You are a helpful chemistry assistant.") -> str:
         """Generate a response from the LLM - used by ProtocolGenerator"""
         try:
-            if self.provider == "openai" and self.openai_key:
-                response = openai.ChatCompletion.create(
+            if self.provider == "openai" and self.openai_client:
+                response = self.openai_client.chat.completions.create(
                     model=OPENAI_MODEL,
                     messages=[
                         {"role": "system", "content": system_message},

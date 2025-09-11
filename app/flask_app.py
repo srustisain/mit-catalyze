@@ -1,9 +1,9 @@
 import sys 
-sys.path.insert(0, '..')
+import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
-import os
 from typing import Dict, List
 import json
 from datetime import datetime
@@ -30,6 +30,34 @@ def health_check():
         'message': 'Catalyze API is running',
         'timestamp': datetime.now().isoformat()
     })
+
+@app.route('/api/chat', methods=['POST'])
+def chat_with_llm():
+    """Chat with LLM using Hugging Face API"""
+    try:
+        data = request.get_json()
+        message = data.get('message', '').strip()
+        conversation_history = data.get('conversation_history', [])
+
+        if not message:
+            return jsonify({'error': 'Message is required'}), 400
+
+        # Import LLM client
+        from src.clients.llm_client import LLMClient
+        
+        # Initialize LLM client with OpenAI
+        llm_client = LLMClient(provider="openai")
+        
+        # Generate response using the LLM
+        response = llm_client.generate_chat_response(message, conversation_history)
+        
+        return jsonify({
+            'response': response,
+            'timestamp': datetime.now().isoformat()
+        })
+
+    except Exception as e:
+        return jsonify({'error': f'Error processing chat: {str(e)}'}), 500
 
 @app.route('/api/query', methods=['POST'])
 def process_chemistry_query():
