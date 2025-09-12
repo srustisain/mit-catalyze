@@ -1,0 +1,197 @@
+"""
+Smart Router Agent
+
+Intelligent router that classifies user queries and delegates to appropriate specialized agents.
+Uses LangGraph for state management and decision flow.
+"""
+
+import asyncio
+import logging
+from typing import Dict, List, Optional, Any, TypedDict
+from datetime import datetime
+
+from .intent_classifier import IntentClassifier, IntentType, ClassificationResult
+from .research_agent import ResearchAgent
+from .protocol_agent import ProtocolAgent
+from .automate_agent import AutomateAgent
+from .safety_agent import SafetyAgent
+from src.clients.llm_client import LLMClient
+
+
+class RouterState(TypedDict):
+    """State for the router agent"""
+    query: str
+    context: Dict[str, Any]
+    classification: Optional[ClassificationResult]
+    agent_responses: Dict[str, Any]
+    final_response: Optional[str]
+    error: Optional[str]
+    metadata: Dict[str, Any]
+
+
+class SmartRouter:
+    """Intelligent router agent for query classification and delegation"""
+    
+    def __init__(self, llm_client: LLMClient = None):
+        self.llm_client = llm_client or LLMClient()
+        self.logger = logging.getLogger("catalyze.smart_router")
+        
+        # Initialize components
+        self.intent_classifier = IntentClassifier(llm_client)
+        self.specialized_agents = {
+            IntentType.RESEARCH: ResearchAgent(),
+            IntentType.PROTOCOL: ProtocolAgent(),
+            IntentType.AUTOMATE: AutomateAgent(),
+            IntentType.SAFETY: SafetyAgent()
+        }
+    
+    async def process_query(self, query: str, context: Dict[str, Any] = None) -> Dict[str, Any]:
+        """
+        Process a user query through the router system
+        
+        Args:
+            query: User's query string
+            context: Additional context (conversation history, etc.)
+            
+        Returns:
+            Dictionary containing the response and metadata
+        """
+        self.logger.info(f"Processing query: {query[:100]}...")
+        
+        try:
+            # Step 1: Classify the query
+            classification = await self.intent_classifier.classify(query, context)
+            self.logger.info(f"Classified as: {classification.intent.value} (confidence: {classification.confidence:.2f})")
+            
+            # Step 2: Route to appropriate agent
+            if classification.confidence < 0.3:
+                return {
+                    "success": False,
+                    "response": "I'm not sure how to help with that. Could you please rephrase your question or provide more details?",
+                    "classification": classification,
+                    "error": f"Low confidence classification: {classification.confidence:.2f}"
+                }
+            
+            # Step 3: Execute the appropriate agent
+            agent_response = await self._execute_agent(classification.intent, query, context)
+            
+            # Step 4: Format the response
+            final_response = self._format_response(agent_response, classification)
+            
+            return {
+                "success": True,
+                "response": final_response,
+                "classification": classification,
+                "agent_response": agent_response,
+                "metadata": {
+                    "processed_at": datetime.now().isoformat(),
+                    "intent": classification.intent.value,
+                    "confidence": classification.confidence
+                }
+            }
+            
+        except Exception as e:
+            self.logger.error(f"Router processing failed: {e}")
+            return {
+                "success": False,
+                "response": "I apologize, but I encountered an error while processing your query. Please try again.",
+                "error": str(e),
+                "metadata": {"error_time": datetime.now().isoformat()}
+            }
+    
+    async def _execute_agent(self, intent: IntentType, query: str, context: Dict[str, Any]) -> Dict[str, Any]:
+        """Execute the appropriate specialized agent"""
+        try:
+            agent = self.specialized_agents.get(intent)
+            if not agent:
+                return {
+                    "success": False,
+                    "error": f"No agent available for intent: {intent.value}"
+                }
+            
+            # Initialize agent if needed
+            if not hasattr(agent, '_initialized') or not agent._initialized:
+                await agent.initialize()
+                agent._initialized = True
+            
+            # Process the query
+            response = await agent.process_query(query, context)
+            return response
+            
+        except Exception as e:
+            self.logger.error(f"Agent execution failed for {intent.value}: {e}")
+            return {
+                "success": False,
+                "error": str(e)
+            }
+    
+    def _format_response(self, agent_response: Dict[str, Any], classification: ClassificationResult) -> str:
+        """Format the agent response for the user"""
+        try:
+            if not agent_response.get("success", False):
+                error_msg = agent_response.get("error", "Unknown error")
+                return f"I encountered an issue while processing your {classification.intent.value} request: {error_msg}"
+            
+            # Extract the main response content
+            if "response" in agent_response:
+                content = agent_response["response"]
+            elif "message" in agent_response:
+                content = agent_response["message"]
+            else:
+                content = str(agent_response)
+            
+            # Add classification context if confidence is low
+            if classification.confidence < 0.8:
+                context = f"\n\n*Note: I classified this as a {classification.intent.value} question. If this isn't what you were looking for, please let me know!*"
+                content += context
+            
+            return content
+            
+        except Exception as e:
+            self.logger.error(f"Response formatting failed: {e}")
+            return "Response received but formatting failed."
+    
+    async def get_status(self) -> Dict[str, Any]:
+        """Get status of the router and all agents"""
+        status = {
+            "router": "active",
+            "intent_classifier": "active",
+            "specialized_agents": {}
+        }
+        
+        for intent, agent in self.specialized_agents.items():
+            try:
+                status["specialized_agents"][intent.value] = "available"
+            except Exception as e:
+                status["specialized_agents"][intent.value] = f"error: {str(e)}"
+        
+        return status
+
+
+# Example usage and testing
+async def test_smart_router():
+    """Test the smart router with sample queries"""
+    router = SmartRouter()
+    
+    test_queries = [
+        "What is the molecular weight of caffeine?",
+        "How do I synthesize aspirin?",
+        "Generate an Opentrons protocol for liquid handling",
+        "Is this chemical combination safe?",
+        "Explain the mechanism of PCR",
+        "Create a protein extraction protocol"
+    ]
+    
+    print("🧪 Testing Smart Router...")
+    for query in test_queries:
+        print(f"\nQuery: {query}")
+        result = await router.process_query(query)
+        print(f"Success: {result['success']}")
+        print(f"Response: {result['response'][:200]}...")
+        if result.get('classification'):
+            print(f"Classified as: {result['classification'].intent.value}")
+        print("-" * 50)
+
+
+if __name__ == "__main__":
+    asyncio.run(test_smart_router())
