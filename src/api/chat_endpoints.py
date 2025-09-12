@@ -5,6 +5,7 @@ Clean API endpoints for chat functionality with agent-based processing.
 """
 
 import logging
+import re
 from typing import Dict, Any, Optional
 from datetime import datetime
 import os
@@ -39,6 +40,9 @@ class ChatEndpoints:
         text = text.replace('__', '')  # Remove underline markers
         text = text.replace('_', '')   # Remove remaining underline markers
         
+        # Clean up verbose ChEMBL responses first
+        text = self._clean_chembl_response(text)
+        
         # Improve line breaks - ensure proper spacing
         text = text.replace('\n\n\n', '\n\n')  # Remove triple line breaks
         text = text.replace('\n\n\n\n', '\n\n')  # Remove quadruple line breaks
@@ -56,28 +60,6 @@ class ChatEndpoints:
         text = text.replace('Your capabilities include:', '\n\nYour capabilities include:')
         text = text.replace('When answering questions:', '\n\nWhen answering questions:')
         text = text.replace('Always prioritize accuracy and provide comprehensive information.', '')
-        
-        # Remove verbose ChEMBL JSON data that clutters responses
-        if 'ChEMBL Database: {' in text:
-            # Find the start and end of the JSON block
-            start = text.find('ChEMBL Database: {')
-            if start != -1:
-                # Find the end of the JSON block (look for the closing brace)
-                brace_count = 0
-                end = start
-                for i, char in enumerate(text[start:], start):
-                    if char == '{':
-                        brace_count += 1
-                    elif char == '}':
-                        brace_count -= 1
-                        if brace_count == 0:
-                            end = i + 1
-                            break
-                
-                if end > start:
-                    # Replace the entire JSON block with a cleaner summary
-                    json_block = text[start:end]
-                    text = text.replace(json_block, '\n\nAdditional Database Information:\nDetailed chemical data retrieved from ChEMBL database.')
         
         # Fix line breaks for lists and structured content
         text = text.replace('- ', '\n- ')  # Ensure bullet points are on new lines
@@ -115,6 +97,93 @@ class ChatEndpoints:
         text = text.replace('\n\n\n', '\n\n')
         
         return text
+    
+    def _clean_chembl_response(self, text: str) -> str:
+        """Clean up verbose ChEMBL responses to make them more user-friendly"""
+        if not text:
+            return text
+        
+        # Remove the verbose ChEMBL system prompt and capabilities
+        verbose_patterns = [
+            "ChEMBL Database: You are a Research Agent specialized in chemistry research and explanations.",
+            "Your capabilities include:",
+            "- Answering chemistry questions with detailed explanations",
+            "- Providing chemical properties, structures, and formulas", 
+            "- Explaining chemical reactions and mechanisms",
+            "- Accessing ChEMBL database for accurate chemical data",
+            "- Searching for compounds, targets, and bioactivity data",
+            "When answering questions:",
+            "1. Provide clear, accurate explanations",
+            "2. Use ChEMBL tools to get precise chemical data",
+            "3. Cite sources when possible",
+            "4. Explain complex concepts in understandable terms",
+            "5. Include relevant chemical properties and structures",
+            "Always prioritize accuracy and provide comprehensive information.",
+            "ChEMBL Database:"
+        ]
+        
+        for pattern in verbose_patterns:
+            text = text.replace(pattern, '')
+        
+        # Remove large JSON blocks completely - they're too verbose
+        # Look for JSON-like structures and replace with simple summaries
+        json_patterns = [
+            r'\{[^{}]*"molecules"[^{}]*\{.*?\}.*?\}',  # Match molecules JSON blocks
+            r'\{[^{}]*"moleculeproperties"[^{}]*\{.*?\}.*?\}',  # Match properties blocks
+            r'\{[^{}]*"moleculestructures"[^{}]*\{.*?\}.*?\}',  # Match structures blocks
+            r'\{[^{}]*"pagemeta"[^{}]*\{.*?\}.*?\}',  # Match pagination blocks
+        ]
+        
+        for pattern in json_patterns:
+            text = re.sub(pattern, '', text, flags=re.DOTALL)
+        
+        # Remove any remaining large JSON blocks
+        text = re.sub(r'\{.*?"molecules".*?\}', '', text, flags=re.DOTALL)
+        
+        # Clean up any remaining ChEMBL Database: prefixes
+        text = re.sub(r'ChEMBL Database:\s*', '', text)
+        
+        # Remove duplicate "Additional Database Information" sections
+        text = re.sub(r'Additional Database Information:.*?(?=Additional Database Information:|$)', '', text, flags=re.DOTALL)
+        
+        # Clean up extra whitespace and line breaks
+        text = re.sub(r'\n\s*\n\s*\n', '\n\n', text)
+        text = text.strip()
+        
+        return text
+    
+    def _extract_chembl_summary(self, chembl_block: str) -> str:
+        """Extract key information from ChEMBL response blocks"""
+        try:
+            # Look for key chemical properties in the block
+            summary_parts = []
+            
+            # Extract molecular formula
+            if 'molecular_formula' in chembl_block.lower():
+                import re
+                formula_match = re.search(r'"molecular_formula":\s*"([^"]+)"', chembl_block)
+                if formula_match:
+                    summary_parts.append(f"Molecular Formula: {formula_match.group(1)}")
+            
+            # Extract molecular weight
+            if 'molecular_weight' in chembl_block.lower():
+                weight_match = re.search(r'"molecular_weight":\s*([0-9.]+)', chembl_block)
+                if weight_match:
+                    summary_parts.append(f"Molecular Weight: {weight_match.group(1)} g/mol")
+            
+            # Extract canonical SMILES
+            if 'canonical_smiles' in chembl_block.lower():
+                smiles_match = re.search(r'"canonical_smiles":\s*"([^"]+)"', chembl_block)
+                if smiles_match:
+                    summary_parts.append(f"Canonical SMILES: {smiles_match.group(1)}")
+            
+            if summary_parts:
+                return "\n\nAdditional Database Information:\nDetailed chemical data retrieved from ChEMBL database.\n" + "\n".join(summary_parts)
+            else:
+                return "\n\nAdditional Database Information:\nDetailed chemical data retrieved from ChEMBL database."
+                
+        except Exception:
+            return "\n\nAdditional Database Information:\nDetailed chemical data retrieved from ChEMBL database."
     
     async def initialize(self):
         """Initialize the pipeline manager"""

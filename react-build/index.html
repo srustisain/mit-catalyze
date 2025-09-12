@@ -373,38 +373,6 @@
                 </div>
             </div>
 
-            <!-- PDF Upload Area -->
-            <div id="pdfUploadArea" class="px-6 py-4 border-t border-gray-200 dark:border-gray-700" style="display: none;">
-                <div class="bg-blue-50 dark:bg-blue-900/20 border-2 border-dashed border-blue-300 dark:border-blue-600 rounded-lg p-6 text-center">
-                    <div class="text-4xl mb-2">📄</div>
-                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">Upload Scientific PDF</h3>
-                    <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">Drag and drop your PDF here or click to browse</p>
-                    <input type="file" id="pdfFileInput" accept=".pdf" class="hidden">
-                    <button onclick="document.getElementById('pdfFileInput').click()" class="scientist-gradient text-white px-6 py-2 rounded-lg font-medium hover:opacity-90 transition-all button-press">
-                        Choose PDF File
-                    </button>
-                    <div id="pdfUploadProgress" class="mt-4 hidden">
-                        <div class="bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                            <div id="pdfProgressBar" class="bg-blue-600 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
-                        </div>
-                        <p id="pdfUploadStatus" class="text-sm text-gray-600 dark:text-gray-400 mt-2">Uploading...</p>
-                    </div>
-                    <div id="pdfUploadSuccess" class="mt-4 hidden text-green-600 dark:text-green-400">
-                        ✅ PDF uploaded successfully! You can now ask questions about it.
-                    </div>
-                    <div id="pdfUploadError" class="mt-4 hidden text-red-600 dark:text-red-400">
-                        ❌ Upload failed. Please try again.
-                    </div>
-                </div>
-                <div class="flex justify-between items-center mt-4">
-                    <button onclick="togglePdfUpload()" class="text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 text-sm">
-                        ← Back to chat
-                    </button>
-                    <button onclick="clearPdfContext()" class="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-200 text-sm">
-                        Clear PDF context
-                    </button>
-                </div>
-            </div>
 
             <!-- Chat Input -->
             <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-700">
@@ -412,10 +380,11 @@
                     <input type="text" id="chatInput" placeholder="Ask about chemistry, materials, or lab protocols..." 
                            class="input-focus flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400">
                     
-                    <!-- Simple Chat Buttons -->
-                    <div class="flex space-x-4">
-                        <button onclick="togglePdfUpload()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-lg font-medium hover:opacity-90 transition-all button-press flex items-center space-x-2" title="Upload PDF">
-                            <span>📄</span>
+                    <!-- Chat Buttons -->
+                    <div class="flex space-x-2">
+                        <input type="file" id="pdfInput" accept=".pdf" class="hidden">
+                        <button onclick="document.getElementById('pdfInput').click()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-lg font-medium transition-all flex items-center" title="Upload PDF">
+                            📄
                         </button>
                         <button id="sendButton" class="scientist-gradient text-white px-6 py-3 rounded-lg font-medium hover:opacity-90 transition-all button-press flex items-center space-x-2">
                             <span>Send</span>
@@ -557,6 +526,8 @@
         let chatHistory = [];
         let currentChatId = null;
         let chatCounter = 0;
+        let chatMessages = null;
+        let chatHistoryContainer = null;
 
         // Theme management will be initialized after DOM loads
 
@@ -568,12 +539,12 @@
             const tabButtons = document.querySelectorAll('.tab-btn');
             const tabContents = document.querySelectorAll('.tab-content');
             const chatInput = document.getElementById('chatInput');
-            const chatMessages = document.getElementById('chatMessages');
+            chatMessages = document.getElementById('chatMessages');
             const queryCount = document.getElementById('queryCount');
             const protocolCount = document.getElementById('protocolCount');
             const scriptCount = document.getElementById('scriptCount');
             const newChatBtn = document.getElementById('newChatBtn');
-            const chatHistoryContainer = document.getElementById('chatHistory');
+            chatHistoryContainer = document.getElementById('chatHistory');
             
             // Individual buttons
             const sendButton = document.getElementById('sendButton');
@@ -668,118 +639,7 @@
                 }
             }
 
-            // Generate Protocol from Research
-            async function generateProtocolFromResearch() {
-                const protocolContent = document.getElementById('protocolContent');
-                protocolContent.innerHTML = '<div class="text-center"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto"></div><p class="mt-2">Generating protocol...</p></div>';
-                
-                try {
-                    // Get the last research message
-                    const chat = chatHistory.find(c => c.id === currentChatId);
-                    if (!chat || chat.messages.length === 0) {
-                        throw new Error('No research data available');
-                    }
-                    
-                    const lastUserMessage = chat.messages.filter(m => m.isUser).pop();
-                    if (!lastUserMessage) {
-                        throw new Error('No user research input found');
-                    }
-                    
-                    const protocolPrompt = `Generate a detailed laboratory protocol based on this research request: ${lastUserMessage.content}`;
-                    
-                    const response = await fetch('/api/chat', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({
-                            message: protocolPrompt,
-                            mode: 'protocol',
-                            conversation_history: []
-                        })
-                    });
-                    
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-                    
-                    const data = await response.json();
-                    
-                    // Update protocol content
-                    protocolContent.innerHTML = `
-                        <div class="mb-4">
-                            <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">Generated Protocol</h4>
-                            <div class="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-600">
-                                <pre class="whitespace-pre-wrap text-sm text-gray-900 dark:text-white">${data.response}</pre>
-                            </div>
-                        </div>
-                    `;
-                    
-                    // Store protocol for automation
-                    currentProtocol = data.response;
-                    
-                } catch (error) {
-                    console.error('Error generating protocol:', error);
-                    protocolContent.innerHTML = `
-                        <div class="text-center text-red-600 dark:text-red-400">
-                            <p>Error generating protocol: ${error.message}</p>
-                        </div>
-                    `;
-                }
-            }
 
-            // Generate Automation Code
-            async function generateAutomationCode() {
-                const automationContent = document.getElementById('automationContent');
-                automationContent.innerHTML = '<div class="text-center"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mx-auto"></div><p class="mt-2">Generating automation code...</p></div>';
-                
-                try {
-                    if (!currentProtocol) {
-                        throw new Error('No protocol available for automation');
-                    }
-                    
-                    const automationPrompt = `Generate Python automation code for this protocol: ${currentProtocol}`;
-                    
-                    const response = await fetch('/api/chat', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({
-                            message: automationPrompt,
-                            mode: 'automate',
-                            conversation_history: []
-                        })
-                    });
-                    
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-                    
-                    const data = await response.json();
-                    
-                    // Store automation code
-                    currentAutomationCode = data.response;
-                    
-                    // Update automation content
-                    automationContent.innerHTML = `
-                        <div class="mb-4">
-                            <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">Generated Automation Code</h4>
-                            <div class="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-600">
-                                <pre class="whitespace-pre-wrap text-sm text-gray-900 dark:text-white overflow-x-auto">${data.response}</pre>
-                            </div>
-                        </div>
-                    `;
-                    
-                } catch (error) {
-                    console.error('Error generating automation code:', error);
-                    automationContent.innerHTML = `
-                        <div class="text-center text-red-600 dark:text-red-400">
-                            <p>Error generating automation code: ${error.message}</p>
-                        </div>
-                    `;
-                }
-            }
             
             // Button Event Listeners
             
@@ -848,7 +708,6 @@
                 currentTabMode = 'research';
                 currentProtocol = null;
                 currentAutomationCode = null;
-                
                 
                 // Clear current chat messages
                 chatMessages.innerHTML = `
@@ -1034,9 +893,10 @@
                         };
                         
                         // Add PDF context if available
-                        if (currentPdfContext) {
-                            requestBody.pdf_context = currentPdfContext;
+                        if (currentPdf) {
+                            requestBody.pdf_context = currentPdf;
                         }
+                        
                         
                         const response = await fetch('/api/chat', {
                             method: 'POST',
@@ -1060,7 +920,7 @@
                         
                         // Add the LLM response with agent info
                         const agentInfo = data.agent_used ? ` (via ${data.agent_used} agent)` : '';
-                        const pdfInfo = currentPdfContext ? ` 📄 (analyzing "${currentPdfContext.filename}")` : '';
+                        const pdfInfo = currentPdf ? ` 📄 (analyzing "${currentPdf.filename}")` : '';
                         addMessage(data.response || "I've processed your request successfully!" + agentInfo + pdfInfo);
                         
                         // Handle different tab modes
@@ -1093,104 +953,7 @@
             }
 
 
-            // Generate Safety Information for Protocol
-            async function generateSafetyForProtocol(protocolText) {
-                try {
-                    // Generate safety analysis for the protocol
-                    const safetyPrompt = `Analyze the safety hazards and provide safety information for this protocol: ${protocolText}`;
-                    
-                    // Get conversation history for context
-                    const chat = chatHistory.find(c => c.id === currentChatId);
-                    const conversationHistory = chat ? chat.messages.map(msg => ({
-                        role: msg.isUser ? "user" : "assistant",
-                        content: msg.content
-                    })) : [];
-                    
-                    // Call the chat API with safety mode
-                    const response = await fetch('/api/chat', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({
-                            message: safetyPrompt,
-                            mode: 'safety',
-                            conversation_history: conversationHistory
-                        })
-                    });
-                    
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-                    
-                    const data = await response.json();
-                    
-                    // Update safety tab with the safety information
-                    updateSafetyData(data.response);
-                    
-                } catch (error) {
-                    console.error('Error generating safety information:', error);
-                }
-            }
 
-            // Helper functions for updating tabs with API data
-            function updateChemicalData(chemicalData) {
-                // Update the chemicals tab with the data from API
-                const chemicalsTab = document.getElementById('chemicals');
-                if (chemicalsTab && chemicalData) {
-                    let html = '<h3 class="text-lg font-semibold mb-4">Chemical Information</h3>';
-                    for (const [chemical, data] of Object.entries(chemicalData)) {
-                        html += `<div class="mb-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                            <h4 class="font-semibold text-blue-600 dark:text-blue-400">${chemical}</h4>
-                            <pre class="text-sm mt-2">${JSON.stringify(data, null, 2)}</pre>
-                        </div>`;
-                    }
-                    chemicalsTab.innerHTML = html;
-                }
-            }
-
-            function updateProtocolData(protocol) {
-                // Store the current protocol
-                currentProtocol = protocol;
-                workflowState = 'protocol_generated';
-                
-                // Show the automate button
-                automateButton.style.display = 'flex';
-                
-                // Update the protocol tab with the data from API
-                const protocolTab = document.getElementById('protocol');
-                if (protocolTab && protocol) {
-                    let html = '<h3 class="text-lg font-semibold mb-4">Generated Protocol</h3>';
-                    html += `<div class="mb-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                        <pre class="text-sm">${JSON.stringify(protocol, null, 2)}</pre>
-                    </div>`;
-                    protocolTab.innerHTML = html;
-                }
-            }
-
-            function updateAutomationData(automationCode) {
-                // Update the automation tab with the generated code
-                const automationTab = document.getElementById('automation');
-                if (automationTab && automationCode) {
-                    let html = '<h3 class="text-lg font-semibold mb-4">Generated Automation Code</h3>';
-                    html += `<div class="mb-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                        <pre class="text-sm overflow-x-auto">${automationCode}</pre>
-                    </div>`;
-                    automationTab.innerHTML = html;
-                }
-            }
-
-            function updateSafetyData(safetyInfo) {
-                // Update the safety tab with the safety information
-                const safetyTab = document.getElementById('safety');
-                if (safetyTab && safetyInfo) {
-                    let html = '<h3 class="text-lg font-semibold mb-4">Safety Analysis</h3>';
-                    html += `<div class="mb-4 p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
-                        <div class="text-sm">${safetyInfo}</div>
-                    </div>`;
-                    safetyTab.innerHTML = html;
-                }
-            }
 
 
 
@@ -1409,120 +1172,95 @@
                 alert('Export all feature coming soon!');
             }
 
-            // PDF Upload Functions
-            let currentPdfContext = null;
+
+            // Simple PDF Upload
+            let currentPdf = null;
             
-            function togglePdfUpload() {
-                const uploadArea = document.getElementById('pdfUploadArea');
-                const chatInput = document.getElementById('chatInput');
+            document.getElementById('pdfInput').addEventListener('change', async function(e) {
+                const file = e.target.files[0];
+                if (!file) return;
                 
-                if (uploadArea.style.display === 'none') {
-                    uploadArea.style.display = 'block';
-                    chatInput.placeholder = 'Upload a PDF first, then ask questions about it...';
-                } else {
-                    uploadArea.style.display = 'none';
-                    chatInput.placeholder = 'Ask about chemistry, materials, or lab protocols...';
-                }
-            }
-            
-            function clearPdfContext() {
-                currentPdfContext = null;
-                document.getElementById('pdfFileInput').value = '';
-                document.getElementById('pdfUploadSuccess').classList.add('hidden');
-                document.getElementById('pdfUploadError').classList.add('hidden');
-                document.getElementById('pdfUploadProgress').classList.add('hidden');
-                document.getElementById('chatInput').placeholder = 'Ask about chemistry, materials, or lab protocols...';
-                console.log('PDF context cleared');
-            }
-            
-            async function uploadPdf(file) {
-                const formData = new FormData();
-                formData.append('pdf', file);
+                console.log('PDF selected:', file.name);
                 
-                // Show progress
-                const progressDiv = document.getElementById('pdfUploadProgress');
-                const progressBar = document.getElementById('pdfProgressBar');
-                const statusText = document.getElementById('pdfUploadStatus');
-                
-                progressDiv.classList.remove('hidden');
-                document.getElementById('pdfUploadSuccess').classList.add('hidden');
-                document.getElementById('pdfUploadError').classList.add('hidden');
+                // Show upload card
+                showPdfCard('uploading', file.name);
                 
                 try {
-                    // Simulate progress
-                    let progress = 0;
-                    const progressInterval = setInterval(() => {
-                        progress += Math.random() * 30;
-                        if (progress > 90) progress = 90;
-                        progressBar.style.width = progress + '%';
-                        statusText.textContent = progress < 50 ? 'Uploading PDF...' : 'Processing PDF...';
-                    }, 200);
+                    const formData = new FormData();
+                    formData.append('pdf', file);
                     
                     const response = await fetch('/api/upload-pdf', {
                         method: 'POST',
                         body: formData
                     });
                     
-                    clearInterval(progressInterval);
-                    progressBar.style.width = '100%';
-                    statusText.textContent = 'Complete!';
-                    
                     if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
+                        throw new Error(`Upload failed: ${response.status}`);
                     }
                     
                     const data = await response.json();
-                    currentPdfContext = data;
                     
-                    // Show success
-                    setTimeout(() => {
-                        progressDiv.classList.add('hidden');
-                        document.getElementById('pdfUploadSuccess').classList.remove('hidden');
+                    if (data.success) {
+                        currentPdf = data;
+                        showPdfCard('success', data.filename);
                         document.getElementById('chatInput').placeholder = `Ask questions about "${data.filename}"...`;
-                    }, 500);
-                    
-                    console.log('PDF uploaded successfully:', data);
+                    } else {
+                        throw new Error(data.error || 'Upload failed');
+                    }
                     
                 } catch (error) {
-                    clearInterval(progressInterval);
-                    progressDiv.classList.add('hidden');
-                    document.getElementById('pdfUploadError').classList.remove('hidden');
-                    console.error('PDF upload failed:', error);
+                    console.error('PDF upload error:', error);
+                    showPdfCard('error', file.name, error.message);
                 }
-            }
+            });
             
-            // Drag and drop functionality
-            function setupDragAndDrop() {
-                const uploadArea = document.getElementById('pdfUploadArea');
-                const fileInput = document.getElementById('pdfFileInput');
+            function showPdfCard(type, filename, errorMessage = '') {
+                const chatMessages = document.getElementById('chatMessages');
+                const card = document.createElement('div');
+                card.className = 'mb-4 max-w-md mx-auto';
                 
-                uploadArea.addEventListener('dragover', (e) => {
-                    e.preventDefault();
-                    uploadArea.classList.add('bg-blue-100', 'dark:bg-blue-800/30');
-                });
+                if (type === 'uploading') {
+                    card.innerHTML = `
+                        <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-4">
+                            <div class="flex items-center">
+                                <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600 mr-3"></div>
+                                <div>
+                                    <p class="text-blue-800 dark:text-blue-200 font-medium">Uploading PDF</p>
+                                    <p class="text-blue-600 dark:text-blue-300 text-sm">${filename}</p>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                } else if (type === 'success') {
+                    card.innerHTML = `
+                        <div class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 rounded-lg p-4">
+                            <div class="flex items-center">
+                                <span class="text-green-600 dark:text-green-400 text-xl mr-3">✅</span>
+                                <div>
+                                    <p class="text-green-800 dark:text-green-200 font-medium">PDF Upload Successful!</p>
+                                    <p class="text-green-600 dark:text-green-300 text-sm">${filename}</p>
+                                    <p class="text-green-600 dark:text-green-300 text-xs mt-1">You can now ask questions about this document</p>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                } else if (type === 'error') {
+                    card.innerHTML = `
+                        <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-lg p-4">
+                            <div class="flex items-center">
+                                <span class="text-red-600 dark:text-red-400 text-xl mr-3">❌</span>
+                                <div>
+                                    <p class="text-red-800 dark:text-red-200 font-medium">PDF Upload Failed</p>
+                                    <p class="text-red-600 dark:text-red-300 text-sm">${filename}</p>
+                                    <p class="text-red-600 dark:text-red-300 text-xs mt-1">${errorMessage}</p>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
                 
-                uploadArea.addEventListener('dragleave', (e) => {
-                    e.preventDefault();
-                    uploadArea.classList.remove('bg-blue-100', 'dark:bg-blue-800/30');
-                });
-                
-                uploadArea.addEventListener('drop', (e) => {
-                    e.preventDefault();
-                    uploadArea.classList.remove('bg-blue-100', 'dark:bg-blue-800/30');
-                    
-                    const files = e.dataTransfer.files;
-                    if (files.length > 0 && files[0].type === 'application/pdf') {
-                        uploadPdf(files[0]);
-                    } else {
-                        alert('Please upload a PDF file.');
-                    }
-                });
-                
-                fileInput.addEventListener('change', (e) => {
-                    if (e.target.files.length > 0) {
-                        uploadPdf(e.target.files[0]);
-                    }
-                });
+                chatMessages.appendChild(card);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
             }
 
             // Make functions globally accessible
@@ -1543,13 +1281,13 @@
             window.exportNotes = exportNotes;
             window.exportAll = exportAll;
             window.deleteChat = deleteChat;
-            window.togglePdfUpload = togglePdfUpload;
-            window.clearPdfContext = clearPdfContext;
+            window.testNewChat = function() {
+                console.log('🧪 Testing new chat function...');
+                createNewChat();
+            };
 
             // Event listeners
             sendButton.addEventListener('click', sendMessage);
-            sendButtonProtocol.addEventListener('click', sendMessage);
-            sendButtonAutomate.addEventListener('click', sendMessage);
             chatInput.addEventListener('keypress', (e) => {
                 if (e.key === 'Enter') sendMessage();
             });
@@ -1559,7 +1297,6 @@
             loadNotes();
             loadChatHistory();
             updateStats();
-            setupDragAndDrop();
             
             console.log('✅ App initialization complete!');
         });
