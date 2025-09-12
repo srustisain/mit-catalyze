@@ -1096,20 +1096,21 @@
                     .replace(/^### (.*$)/gim, '<h3>$1</h3>')
                     .replace(/^## (.*$)/gim, '<h2>$1</h2>')
                     .replace(/^# (.*$)/gim, '<h1>$1</h1>')
-                    // Bold text
-                    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-                    .replace(/__(.*?)__/g, '<strong>$1</strong>')
-                    // Italic text
-                    .replace(/\*(.*?)\*/g, '<em>$1</em>')
-                    .replace(/_(.*?)_/g, '<em>$1</em>')
-                    // Inline code
-                    .replace(/`([^`]+)`/g, '<code>$1</code>')
-                    // Code blocks with syntax highlighting
+                    // Code blocks with syntax highlighting (PROCESS FIRST to protect code from formatting)
                     .replace(/```(\w+)?\n([\s\S]*?)```/g, (match, lang, code) => {
                         const language = lang || 'text';
                         const highlightedCode = highlightCode(code.trim(), language);
                         return `<pre data-language="${language}"><code>${highlightedCode}</code></pre>`;
                     })
+                    // Inline code (PROCESS SECOND to protect inline code from formatting)
+                    .replace(/`([^`]+)`/g, '<code>$1</code>')
+                    // Bold text
+                    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                    .replace(/__(.*?)__/g, '<strong>$1</strong>')
+                    // Italic text (PROCESS LAST so it doesn't affect code)
+                    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                    // DISABLED: Underscore italic conversion to preserve underscores in code
+                    // .replace(/_(.*?)_/g, '<em>$1</em>')
                     // Line breaks
                     .replace(/\n/g, '<br>');
                 
