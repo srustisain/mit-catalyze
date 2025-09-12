@@ -1,3 +1,6 @@
 [submodule "mcp_servers/chembl-mcp-server"]
 	path = mcp_servers/chembl-mcp-server
 	url = https://github.com/Augmented-Nature/ChEMBL-MCP-Server.git
+[submodule "mcp_servers/opentrons-mcp-server"]
+	path = mcp_servers/opentrons-mcp-server
+	url = https://github.com/koji/opentrons-document-mcp-server.git
