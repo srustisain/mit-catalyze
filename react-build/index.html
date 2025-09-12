@@ -17,6 +17,7 @@
         .tab-content { display: none; }
         .tab-content.active { display: block; }
         
+        
         /* Enhanced UI Styles for Scientist-Friendly Interface */
         .glass-effect {
             background: rgba(255, 255, 255, 0.1);
@@ -542,58 +543,29 @@
                 </div>
             </div>
 
-            <!-- PDF Upload Area -->
-            <div id="pdfUploadArea" class="px-6 py-4 border-t border-gray-200 dark:border-gray-700" style="display: none;">
-                <div class="bg-blue-50 dark:bg-blue-900/20 border-2 border-dashed border-blue-300 dark:border-blue-600 rounded-lg p-6 text-center hover:bg-blue-100 dark:hover:bg-blue-800/30 transition-colors" id="pdfDropZone">
-                    <div class="text-4xl mb-2">📄</div>
-                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">Upload Scientific PDF</h3>
-                    <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">Drag and drop your PDF here or click to browse</p>
-                    <input type="file" id="pdfFileInput" accept=".pdf" class="hidden">
-                    <button onclick="document.getElementById('pdfFileInput').click()" class="scientist-gradient text-white px-6 py-2 rounded-lg font-medium hover:opacity-90 transition-all button-press">
-                        Choose PDF File
-                    </button>
-                    <div id="pdfUploadProgress" class="mt-4 hidden">
-                        <div class="bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                            <div id="pdfProgressBar" class="bg-blue-600 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
-                        </div>
-                        <p id="pdfUploadStatus" class="text-sm text-gray-600 dark:text-gray-400 mt-2">Uploading...</p>
-                    </div>
-                    <div id="pdfUploadSuccess" class="mt-4 hidden text-green-600 dark:text-green-400">
-                        <div class="flex items-center justify-center space-x-2">
-                            <span>✅</span>
-                            <span>PDF uploaded successfully! You can now ask questions about it.</span>
-                        </div>
-                        <div id="pdfFileInfo" class="mt-2 text-sm text-gray-500 dark:text-gray-400"></div>
-                    </div>
-                    <div id="pdfUploadError" class="mt-4 hidden text-red-600 dark:text-red-400">
-                        <div class="flex items-center justify-center space-x-2">
-                            <span>❌</span>
-                            <span id="pdfErrorText">Upload failed. Please try again.</span>
-                        </div>
-                    </div>
-                </div>
-                <div class="flex justify-between items-center mt-4">
-                    <button onclick="togglePdfUpload()" class="text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 text-sm flex items-center space-x-1">
-                        <span>←</span>
-                        <span>Back to chat</span>
-                    </button>
-                    <button onclick="clearPdfContext()" class="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-200 text-sm flex items-center space-x-1">
-                        <span>🗑️</span>
-                        <span>Clear PDF context</span>
-                    </button>
-                </div>
-            </div>
 
             <!-- Chat Input -->
             <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-700">
+                <!-- PDF Upload Status -->
+                <div id="pdfStatus" class="mb-3 hidden">
+                    <div id="pdfSuccess" class="hidden bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded flex items-center justify-between">
+                        <span>✅ PDF uploaded: <span id="pdfFileName"></span></span>
+                        <button onclick="clearPdfContext()" class="text-red-600 hover:text-red-800 text-sm ml-2">Clear</button>
+                    </div>
+                    <div id="pdfError" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+                        ❌ <span id="pdfErrorMessage"></span>
+                    </div>
+                </div>
+                
                 <div class="flex space-x-4">
                     <input type="text" id="chatInput" placeholder="Ask about chemistry, materials, or lab protocols..." 
                            class="input-focus flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400">
                     
                     <!-- Simple Chat Buttons -->
                     <div class="flex space-x-4">
-                        <button onclick="togglePdfUpload()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-lg font-medium hover:opacity-90 transition-all button-press flex items-center space-x-2" title="Upload PDF">
-                            <span>📄</span>
+                        <input type="file" id="pdfUpload" accept=".pdf" class="hidden" onchange="uploadPDF(this.files[0])">
+                        <button onclick="document.getElementById('pdfUpload').click()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-lg font-medium transition-all" title="Upload PDF">
+                            📄
                         </button>
                         <button id="sendButton" class="scientist-gradient text-white px-6 py-3 rounded-lg font-medium hover:opacity-90 transition-all button-press flex items-center space-x-2">
                             <span>Send</span>
@@ -601,7 +573,7 @@
                         </button>
                     </div>
                 </div>
-                </div>
+            </div>
             </div>
         </div>
 
@@ -1257,6 +1229,7 @@
                         // Add PDF context if available
                         if (currentPdfContext) {
                             requestBody.pdf_context = currentPdfContext;
+                            console.log('Including PDF context in chat request:', currentPdfContext.filename);
                         }
                         
                         const response = await fetch('/api/chat', {
@@ -1630,183 +1603,55 @@
                 alert('Export all feature coming soon!');
             }
 
-            // PDF Upload Functions
+            // Simple PDF Upload Function
             let currentPdfContext = null;
             
-            function togglePdfUpload() {
-                const uploadArea = document.getElementById('pdfUploadArea');
-                const chatInput = document.getElementById('chatInput');
+            async function uploadPDF(file) {
+                if (!file) return;
                 
-                if (uploadArea.style.display === 'none') {
-                    uploadArea.style.display = 'block';
-                    chatInput.placeholder = 'Upload a PDF first, then ask questions about it...';
-                } else {
-                    uploadArea.style.display = 'none';
-                    chatInput.placeholder = 'Ask about chemistry, materials, or lab protocols...';
-                }
-            }
-            
-            function clearPdfContext() {
-                currentPdfContext = null;
-                document.getElementById('pdfFileInput').value = '';
-                document.getElementById('pdfUploadSuccess').classList.add('hidden');
-                document.getElementById('pdfUploadError').classList.add('hidden');
-                document.getElementById('pdfUploadProgress').classList.add('hidden');
-                document.getElementById('chatInput').placeholder = 'Ask about chemistry, materials, or lab protocols...';
-                console.log('PDF context cleared');
-            }
-            
-            function resetUploadUI() {
-                document.getElementById('pdfUploadSuccess').classList.add('hidden');
-                document.getElementById('pdfUploadError').classList.add('hidden');
-                document.getElementById('pdfUploadProgress').classList.add('hidden');
-                document.getElementById('pdfFileInfo').textContent = '';
-                document.getElementById('pdfErrorText').textContent = 'Upload failed. Please try again.';
-            }
-            
-            function showUploadError(message) {
-                document.getElementById('pdfUploadProgress').classList.add('hidden');
-                document.getElementById('pdfUploadError').classList.remove('hidden');
-                document.getElementById('pdfErrorText').textContent = message;
-            }
-            
-            function showUploadSuccess(data) {
-                document.getElementById('pdfUploadProgress').classList.add('hidden');
-                document.getElementById('pdfUploadSuccess').classList.remove('hidden');
-                document.getElementById('pdfFileInfo').textContent = `File: ${data.filename} (${(data.file_size / 1024).toFixed(1)} KB)`;
-                document.getElementById('chatInput').placeholder = `Ask questions about "${data.filename}"...`;
-            }
-            
-            async function uploadPdf(file) {
-                // Validate file
-                if (!file) {
-                    showUploadError('No file selected');
-                    return;
-                }
+                // Hide any previous messages
+                document.getElementById('pdfStatus').classList.add('hidden');
+                document.getElementById('pdfSuccess').classList.add('hidden');
+                document.getElementById('pdfError').classList.add('hidden');
                 
-                if (file.type !== 'application/pdf') {
-                    showUploadError('Please select a PDF file');
-                    return;
-                }
-                
-                if (file.size > 10 * 1024 * 1024) { // 10MB limit
-                    showUploadError('File size must be less than 10MB');
-                    return;
-                }
-                
-                const formData = new FormData();
-                formData.append('pdf', file);
-                
-                // Show progress
-                const progressDiv = document.getElementById('pdfUploadProgress');
-                const progressBar = document.getElementById('pdfProgressBar');
-                const statusText = document.getElementById('pdfUploadStatus');
-                
-                resetUploadUI();
-                progressDiv.classList.remove('hidden');
+                // Show uploading status
+                document.getElementById('pdfStatus').classList.remove('hidden');
+                document.getElementById('pdfError').classList.remove('hidden');
+                document.getElementById('pdfErrorMessage').textContent = 'Uploading...';
                 
                 try {
-                    // Simulate progress
-                    let progress = 0;
-                    const progressInterval = setInterval(() => {
-                        progress += Math.random() * 20;
-                        if (progress > 85) progress = 85;
-                        progressBar.style.width = progress + '%';
-                        statusText.textContent = progress < 40 ? 'Uploading PDF...' : 'Processing PDF...';
-                    }, 300);
+                    const formData = new FormData();
+                    formData.append('pdf', file);
                     
                     const response = await fetch('/api/upload-pdf', {
                         method: 'POST',
                         body: formData
                     });
                     
-                    clearInterval(progressInterval);
-                    progressBar.style.width = '100%';
-                    statusText.textContent = 'Complete!';
-                    
-                    if (!response.ok) {
-                        const errorData = await response.json().catch(() => ({}));
-                        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
-                    }
-                    
                     const data = await response.json();
                     
-                    if (!data.success) {
+                    if (data.success) {
+                        // Store PDF context for chat integration
+                        currentPdfContext = {
+                            filename: data.filename,
+                            content: data.content,
+                            file_size: data.file_size,
+                            timestamp: data.timestamp
+                        };
+                        
+                        document.getElementById('pdfError').classList.add('hidden');
+                        document.getElementById('pdfSuccess').classList.remove('hidden');
+                        document.getElementById('pdfFileName').textContent = data.filename;
+                        document.getElementById('chatInput').placeholder = `Ask questions about "${data.filename}"...`;
+                        
+                        console.log('PDF context stored:', currentPdfContext);
+                    } else {
                         throw new Error(data.error || 'Upload failed');
                     }
-                    
-                    currentPdfContext = data;
-                    
-                    // Show success
-                    setTimeout(() => {
-                        showUploadSuccess(data);
-                    }, 500);
-                    
-                    console.log('PDF uploaded successfully:', data);
-                    
                 } catch (error) {
-                    clearInterval(progressInterval);
-                    console.error('PDF upload failed:', error);
-                    showUploadError(error.message || 'Upload failed. Please try again.');
+                    document.getElementById('pdfError').classList.remove('hidden');
+                    document.getElementById('pdfErrorMessage').textContent = error.message || 'Upload failed';
                 }
-            }
-            
-            // Drag and drop functionality
-            function setupDragAndDrop() {
-                const dropZone = document.getElementById('pdfDropZone');
-                const fileInput = document.getElementById('pdfFileInput');
-                
-                // Prevent default drag behaviors
-                ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-                    dropZone.addEventListener(eventName, preventDefaults, false);
-                    document.body.addEventListener(eventName, preventDefaults, false);
-                });
-                
-                function preventDefaults(e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                }
-                
-                // Highlight drop zone when item is dragged over it
-                ['dragenter', 'dragover'].forEach(eventName => {
-                    dropZone.addEventListener(eventName, highlight, false);
-                });
-                
-                ['dragleave', 'drop'].forEach(eventName => {
-                    dropZone.addEventListener(eventName, unhighlight, false);
-                });
-                
-                function highlight(e) {
-                    dropZone.classList.add('bg-blue-100', 'dark:bg-blue-800/30');
-                }
-                
-                function unhighlight(e) {
-                    dropZone.classList.remove('bg-blue-100', 'dark:bg-blue-800/30');
-                }
-                
-                // Handle dropped files
-                dropZone.addEventListener('drop', handleDrop, false);
-                
-                function handleDrop(e) {
-                    const dt = e.dataTransfer;
-                    const files = dt.files;
-                    
-                    if (files.length > 0) {
-                        const file = files[0];
-                        if (file.type === 'application/pdf') {
-                            uploadPdf(file);
-                        } else {
-                            showUploadError('Please upload a PDF file');
-                        }
-                    }
-                }
-                
-                // Handle file input change
-                fileInput.addEventListener('change', (e) => {
-                    if (e.target.files.length > 0) {
-                        uploadPdf(e.target.files[0]);
-                    }
-                });
             }
 
             // Make functions globally accessible
@@ -1827,8 +1672,14 @@
             window.exportNotes = exportNotes;
             window.exportAll = exportAll;
             window.deleteChat = deleteChat;
-            window.togglePdfUpload = togglePdfUpload;
-            window.clearPdfContext = clearPdfContext;
+            window.uploadPDF = uploadPDF;
+            window.clearPdfContext = function() {
+                currentPdfContext = null;
+                document.getElementById('pdfUpload').value = '';
+                document.getElementById('pdfStatus').classList.add('hidden');
+                document.getElementById('chatInput').placeholder = 'Ask about chemistry, materials, or lab protocols...';
+                console.log('PDF context cleared');
+            };
 
             // Event listeners
             sendButton.addEventListener('click', sendMessage);
@@ -1839,11 +1690,11 @@
             });
             newChatBtn.addEventListener('click', createNewChat);
 
+
             // Initialize app
             loadNotes();
             loadChatHistory();
             updateStats();
-            setupDragAndDrop();
             
             console.log('✅ App initialization complete!');
         });
