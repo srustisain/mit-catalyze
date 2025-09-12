@@ -179,6 +179,15 @@ def upload_pdf():
         logger.error(f"PDF upload error: {e}")
         return jsonify({'error': f'Failed to process PDF: {str(e)}'}), 500
 
+@app.route('/api/opentrons-status', methods=['GET'])
+def get_opentrons_status():
+    """Get Opentrons generation status (placeholder for future WebSocket implementation)"""
+    return jsonify({
+        'status': 'idle',
+        'message': 'Opentrons generator ready',
+        'timestamp': datetime.now().isoformat()
+    })
+
 # Serve static files
 @app.route('/<path:path>')
 def serve_static(path):
