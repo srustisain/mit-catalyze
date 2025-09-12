@@ -83,7 +83,9 @@ class IntentClassifier:
                     "liquid handling", "automation", "robot", "robotic",
                     "automate", "script", "code", "program", "pyhamilton",
                     "96-well", "plate", "transfer", "dispense", "aspirate",
-                    "api v2", "api v1", "python code", "write code"
+                    "api v2", "api v1", "python code", "write code",
+                    "generate code", "create code", "write script", "make script",
+                    "generate script", "create script", "automation code"
                 ],
                 "patterns": [
                     r"write opentrons.*code",
@@ -94,7 +96,12 @@ class IntentClassifier:
                     r"generate (opentrons|ot-2|flex) (protocol|script)",
                     r"automate (.*) (process|procedure)",
                     r"create (.*) (script|code|program)",
-                    r"liquid handling (protocol|script)"
+                    r"liquid handling (protocol|script)",
+                    r"generate (code|script)",
+                    r"create (code|script)",
+                    r"write (code|script)",
+                    r"make (code|script)",
+                    r"(code|script) for"
                 ]
             },
             IntentType.SAFETY: {
@@ -172,7 +179,7 @@ class IntentClassifier:
             
             # Check high-priority keywords for automation
             if intent_type == IntentType.AUTOMATE:
-                high_priority_keywords = ["write code", "api v2", "api v1", "python code", "opentrons", "ot-2", "ot2"]
+                high_priority_keywords = ["write code", "generate code", "create code", "api v2", "api v1", "python code", "opentrons", "ot-2", "ot2", "automation code"]
                 for keyword in high_priority_keywords:
                     if keyword in query_lower:
                         score += 3.0

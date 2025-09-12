@@ -157,12 +157,16 @@ class ChatEndpoints:
         self.logger.info(f"Processing chat message in {validated_mode.value} mode")
         
         try:
-            # Process through the pipeline
-            result = await self.pipeline_manager.process_query(
-                query=message,
-                mode=validated_mode.value,
-                context=context
-            )
+            # Check if this is a platform selection response
+            if self._is_platform_selection_response(message, conversation_history):
+                result = await self._handle_platform_selection(message, conversation_history, context)
+            else:
+                # Process through the pipeline
+                result = await self.pipeline_manager.process_query(
+                    query=message,
+                    mode=validated_mode.value,
+                    context=context
+                )
             
             # Clean and format the response
             raw_response = result.get("response", "No response generated")
@@ -176,6 +180,16 @@ class ChatEndpoints:
                 "mode": validated_mode.value,
                 "success": result.get("success", True)
             }
+            
+            # Add platform-specific code if present
+            if "opentrons_code" in result:
+                response_data["opentrons_code"] = result["opentrons_code"]
+            if "lynx_code" in result:
+                response_data["lynx_code"] = result["lynx_code"]
+            if "platform" in result:
+                response_data["platform"] = result["platform"]
+            if "language" in result:
+                response_data["language"] = result["language"]
             
             # Add error information if present
             if not result.get("success"):
@@ -194,6 +208,99 @@ class ChatEndpoints:
                 "success": False,
                 "error": str(e)
             }
+    
+    def _is_platform_selection_response(self, message: str, conversation_history: Optional[list] = None) -> bool:
+        """Check if this message is a response to a platform selection request"""
+        message_lower = message.lower().strip()
+        
+        # First check if the message itself looks like a platform choice
+        platform_choices = ["opentrons", "ot2", "ot-2", "ot 2", "lynx", "c#", "csharp", "1", "2"]
+        is_platform_choice = any(choice in message_lower for choice in platform_choices)
+        
+        if is_platform_choice:
+            # If it looks like a platform choice, check if we have conversation history
+            if conversation_history:
+                # Check if the last message from the system was asking for platform selection
+                for msg in reversed(conversation_history[-3:]):  # Check last 3 messages
+                    if msg.get("role") == "assistant" and "Platform Selection Required" in msg.get("content", ""):
+                        return True
+            
+            # If no conversation history or no platform selection found, 
+            # but message looks like a platform choice, assume it's a response
+            return True
+        
+        return False
+    
+    async def _handle_platform_selection(self, message: str, conversation_history: Optional[list] = None, context: Dict[str, Any] = None) -> Dict[str, Any]:
+        """Handle user's platform selection response"""
+        
+        # Extract platform choice from message
+        platform = self._extract_platform_choice(message)
+        
+        if not platform:
+            return {
+                "success": False,
+                "response": "I didn't understand your platform choice. Please respond with 'OpenTrons' or 'Lynx'.",
+                "agent_used": "automate",
+                "timestamp": datetime.now().isoformat()
+            }
+        
+        # Find the original query from conversation history
+        original_query = self._find_original_query(conversation_history)
+        
+        if not original_query:
+            return {
+                "success": False,
+                "response": "I couldn't find your original request. Please try asking again.",
+                "agent_used": "automate",
+                "timestamp": datetime.now().isoformat()
+            }
+        
+        # Process the original query with the selected platform
+        return await self.pipeline_manager.process_query(
+            query=f"{original_query} (platform: {platform})",
+            mode="automate",
+            context=context
+        )
+    
+    def _extract_platform_choice(self, message: str) -> str:
+        """Extract platform choice from user message"""
+        message_lower = message.lower().strip()
+        
+        # Check for OpenTrons choices
+        opentrons_choices = ["opentrons", "ot2", "ot-2", "ot 2", "opentrons ot2", "1", "python"]
+        if any(choice in message_lower for choice in opentrons_choices):
+            return "opentrons"
+        
+        # Check for Lynx choices
+        lynx_choices = ["lynx", "dynamic device", "dynamic device lynx", "c#", "csharp", "2", "c sharp"]
+        if any(choice in message_lower for choice in lynx_choices):
+            return "lynx"
+        
+        return None
+    
+    def _find_original_query(self, conversation_history: Optional[list] = None) -> str:
+        """Find the original query that triggered platform selection"""
+        if not conversation_history:
+            # If no conversation history, return a generic code generation request
+            return "generate code for protocol"
+        
+        # Look for the last user message that contains code generation keywords
+        for msg in reversed(conversation_history):
+            if msg.get("role") == "user":
+                content = msg.get("content", "").lower()
+                # Check if this looks like a code generation request
+                code_keywords = ["generate code", "create code", "write code", "make code", "generate script", "create script"]
+                if any(keyword in content for keyword in code_keywords):
+                    return msg.get("content", "")
+        
+        # Fallback: return the last user message
+        for msg in reversed(conversation_history):
+            if msg.get("role") == "user":
+                return msg.get("content", "")
+        
+        # Final fallback
+        return "generate code for protocol"
     
     async def get_agent_info(self) -> Dict[str, Any]:
         """Get information about available agents"""

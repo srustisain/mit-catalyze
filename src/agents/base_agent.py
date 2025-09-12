@@ -15,10 +15,18 @@ from datetime import datetime
 
 from src.clients.llm_client import LLMClient
 from src.config.config import OPENAI_MODEL, MCP_SERVERS
-from langchain_mcp_adapters.client import MultiServerMCPClient
 from langgraph.prebuilt import create_react_agent
 from src.prompts import load_prompt
 from src.config.logging_config import get_logger
+
+# Try to import MCP client, but make it optional
+try:
+    from langchain_mcp_adapters.client import MultiServerMCPClient
+    MCP_AVAILABLE = True
+except ImportError:
+    print("Warning: langchain_mcp_adapters not available. MCP functionality will be disabled.")
+    MultiServerMCPClient = None
+    MCP_AVAILABLE = False
 
 
 class BaseAgent(ABC):
@@ -38,6 +46,12 @@ class BaseAgent(ABC):
     async def initialize(self):
         """Initialize the agent with MCP tools"""
         try:
+            if not MCP_AVAILABLE:
+                self.logger.warning(f"MCP not available, initializing {self.name} without tools")
+                self.mcp_client = None
+                self.agent = None
+                return
+                
             if not MCP_SERVERS:
                 self.logger.warning(f"No MCP servers configured, initializing {self.name} without tools")
                 self.mcp_client = None
