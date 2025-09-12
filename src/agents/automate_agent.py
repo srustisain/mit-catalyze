@@ -47,11 +47,14 @@ class AutomateAgent(BaseAgent):
         """Generate automation scripts for lab equipment with Opentrons validation"""
         
         try:
-            # Check if this is an Opentrons-specific request
-            if self._is_opentrons_request(query):
-                return await self._process_opentrons_request(query, context)
-            else:
-                return await self._process_general_automation(query, context)
+            # All automate agent requests go through Opentrons generator/validator
+            self.logger.info(f"🔧 {self.name} - Processing Opentrons request: {query[:100]}...")
+            print(f"🔧 {self.name} - WEBAPP DEBUG: Processing query: {query[:100]}...")
+            result = await self._process_opentrons_request(query, context)
+            print(f"🔧 {self.name} - WEBAPP DEBUG: Result keys: {list(result.keys())}")
+            if 'opentrons_code' in result:
+                print(f"🔧 {self.name} - WEBAPP DEBUG: Opentrons code length: {len(result['opentrons_code']) if result['opentrons_code'] else 'None'}")
+            return result
                 
         except Exception as e:
             self.logger.error(f"Automation generation failed: {e}")
@@ -62,15 +65,6 @@ class AutomateAgent(BaseAgent):
                 "timestamp": self._get_timestamp()
             }
     
-    def _is_opentrons_request(self, query: str) -> bool:
-        """Check if the query is specifically for Opentrons automation"""
-        opentrons_keywords = [
-            "opentrons", "ot-2", "ot2", "flex", "protocol", "pipette", "liquid handling",
-            "write code", "generate code", "create code", "code for", "script for",
-            "automation", "robot", "robotic", "lab automation", "liquid handling robot"
-        ]
-        query_lower = query.lower()
-        return any(keyword in query_lower for keyword in opentrons_keywords)
     
     async def _process_opentrons_request(self, query: str, context: Dict[str, Any] = None) -> Dict[str, Any]:
         """Process Opentrons-specific automation requests with validation"""
@@ -81,7 +75,13 @@ class AutomateAgent(BaseAgent):
         # Extract protocol instructions from query and context
         instructions = self._extract_protocol_instructions(query, context)
         
-        self.logger.info(f"Processing Opentrons request: {instructions[:100]}...")
+        self.logger.info(f"🔧 {self.name} - Processing Opentrons request: {instructions[:100]}...")
+        
+        # Log MCP tool usage
+        if self.mcp_client:
+            self.logger.info(f"🔧 {self.name} - MCP client available, will use Opentrons documentation")
+        else:
+            self.logger.warning(f"🔧 {self.name} - MCP client not available, using fallback generation")
         
         # Generate Opentrons code with validation
         generation_result = await self.opentrons_generator.generate_with_validation(
@@ -93,13 +93,14 @@ class AutomateAgent(BaseAgent):
         if generation_result["success"]:
             # Format the response with code and validation info
             response = self._format_opentrons_response(generation_result)
+            print("---------------", response, "---------------------------")
             
             return {
                 "success": True,
                 "response": response,
                 "agent": self.name,
-                "opentrons_code": generation_result["code"],
-                "validation_result": generation_result["validation_result"],
+                "opentrons_code": generation_result.get("code"),  # Use "code" key, not "opentrons_code"
+                "validation_result": generation_result.get("validation_result"),
                 "attempts": generation_result["attempts"],
                 "timestamp": generation_result["timestamp"]
             }
@@ -128,75 +129,6 @@ Suggestions:
                 "timestamp": generation_result["timestamp"]
             }
     
-    async def _process_general_automation(self, query: str, context: Dict[str, Any] = None) -> Dict[str, Any]:
-        """Process general automation requests (non-Opentrons)"""
-        
-        # Create an automation-focused prompt
-        automation_prompt = f"""
-Create a lab automation script for: {query}
-
-Generate Python code for lab automation equipment (PyHamilton, etc.).
-
-Include:
-1. Import statements for required libraries
-2. Protocol definition and setup
-3. Liquid handling instructions
-4. Temperature and timing controls
-5. Error handling and safety checks
-6. Comments explaining each step
-
-Make the code production-ready and well-documented.
-"""
-        
-        try:
-            # Get the main automation response
-            conversation_history = context.get("conversation_history", []) if context else []
-            automation_response = self.llm_client.generate_chat_response(automation_prompt, conversation_history)
-            self.logger.info(f"Generated automation response: {len(automation_response)} characters")
-            
-            # Try to enhance with chemical data for accurate volumes/concentrations
-            chembl_enhancement = ""
-            try:
-                agent_result = await self._run_agent_safely(query, context)
-                
-                if agent_result.get("success"):
-                    # Look for chemical data that could inform automation parameters
-                    messages = agent_result.get("response", [])
-                    chemical_data = []
-                    
-                    for message in messages:
-                        if hasattr(message, 'content') and message.content:
-                            content = message.content
-                            if any(keyword in content.lower() for keyword in ["molecular weight", "concentration", "volume", "properties"]):
-                                chemical_data.append(content)
-                    
-                    if chemical_data:
-                        chembl_enhancement = "\n\n**Chemical Parameters for Automation:**\n" + "\n".join(chemical_data)
-                        self.logger.info(f"Added chemical parameters: {len(chembl_enhancement)} characters")
-                
-            except Exception as e:
-                self.logger.error(f"ChEMBL enhancement failed: {e}")
-                chembl_enhancement = "\n\n(Note: Chemical database access temporarily unavailable)"
-            
-            # Combine responses
-            final_response = automation_response + chembl_enhancement
-            
-            return {
-                "success": True,
-                "response": final_response,
-                "agent": self.name,
-                "used_mcp": bool(chembl_enhancement),
-                "timestamp": self._get_timestamp()
-            }
-            
-        except Exception as e:
-            self.logger.error(f"General automation generation failed: {e}")
-            return {
-                "success": False,
-                "error": str(e),
-                "agent": self.name,
-                "timestamp": self._get_timestamp()
-            }
     
     def _extract_protocol_instructions(self, query: str, context: Dict[str, Any] = None) -> str:
         """Extract protocol instructions from query and context"""
@@ -218,24 +150,16 @@ Make the code production-ready and well-documented.
     
     def _format_opentrons_response(self, generation_result: Dict[str, Any]) -> str:
         """Format the Opentrons generation result for display"""
-        code = generation_result["code"]
-        validation_result = generation_result["validation_result"]
+        code = generation_result.get("code", "NO CODE FOUND")
+        validation_result = generation_result.get("validation_result")
         attempts = generation_result["attempts"]
         
-        response = f"""🤖 **Opentrons Protocol Generated Successfully**
-
-Generated in {attempts} attempt(s) with validation.
-
-{code}
-**Validation Status:** ✅ {generation_result["validation_result"]}
-**Simulation Time:** {validation_result.simulation_time:.2f}s
-
-"""
+        response = code
         
         if validation_result.warnings:
             response += f"**Warnings:**\n{chr(10).join([f'- {w}' for w in validation_result.warnings])}\n\n"
         
-        response += "The protocol has been validated using Opentrons simulation and is ready to use."
+        # response += "The protocol has been validated using Opentrons simulation and is ready to use."
         
         return response
     

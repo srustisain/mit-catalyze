@@ -56,11 +56,16 @@ class BaseAgent(ABC):
             self.mcp_client = MultiServerMCPClient(server_config)
             available_tools = await self.mcp_client.get_tools()
             
+            self.logger.info(f"🔧 {self.name} - MCP client loaded {len(available_tools)} total tools from {list(server_config.keys())}")
+            self.logger.info(f"🔧 {self.name} - Available tool names: {[tool.name for tool in available_tools]}")
+            
             # Filter tools based on agent specialization
             if self.tools:
                 available_tools = [tool for tool in available_tools if tool.name in self.tools]
+                self.logger.info(f"🔧 {self.name} - Filtered to {len(available_tools)} tools matching {self.tools}")
+                self.logger.info(f"🔧 {self.name} - Filtered tool names: {[tool.name for tool in available_tools]}")
             
-            self.logger.info(f"Initialized {self.name} with {len(available_tools)} tools from {list(server_config.keys())}")
+            self.logger.info(f"🔧 {self.name} - Successfully initialized with {len(available_tools)} tools")
             
             # No LangGraph agent - use direct MCP tool calls
             self.agent = None
@@ -166,13 +171,39 @@ Please format your responses in well-structured markdown for better readability.
                 }
                 agent_input["context"] = limited_context
             
+            # Log the agent input
+            self.logger.info(f"🔧 {self.name} - Running agent with input: {len(agent_input['messages'])} messages")
+            
             # Run the agent
             result = await self.agent.ainvoke(agent_input)
             
+            # Log the result
+            messages = result.get("messages", [])
+            self.logger.info(f"🔧 {self.name} - Agent completed with {len(messages)} response messages")
+            
+            # Log any tool calls made
+            tool_calls_made = []
+            for message in messages:
+                if hasattr(message, 'tool_calls') and message.tool_calls:
+                    for tool_call in message.tool_calls:
+                        tool_calls_made.append({
+                            'tool_name': tool_call.get('name', 'unknown'),
+                            'args': tool_call.get('args', {}),
+                            'id': tool_call.get('id', 'unknown')
+                        })
+            
+            if tool_calls_made:
+                self.logger.info(f"🔧 {self.name} - Made {len(tool_calls_made)} tool calls:")
+                for i, tool_call in enumerate(tool_calls_made, 1):
+                    self.logger.info(f"  {i}. {tool_call['tool_name']} with args: {tool_call['args']}")
+            else:
+                self.logger.info(f"🔧 {self.name} - No tool calls made")
+            
             return {
                 "success": True,
-                "response": result.get("messages", []),
+                "response": messages,
                 "agent": self.name,
+                "tool_calls": tool_calls_made,
                 "timestamp": datetime.now().isoformat()
             }
             

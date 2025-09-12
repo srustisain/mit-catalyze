@@ -79,12 +79,17 @@ class IntentClassifier:
             },
             IntentType.AUTOMATE: {
                 "keywords": [
-                    "opentrons", "ot-2", "ot2", "flex", "protocol", "pipette",
+                    "opentrons", "ot-2", "ot2", "flex", "pipette",
                     "liquid handling", "automation", "robot", "robotic",
                     "automate", "script", "code", "program", "pyhamilton",
-                    "96-well", "plate", "transfer", "dispense", "aspirate"
+                    "96-well", "plate", "transfer", "dispense", "aspirate",
+                    "api v2", "api v1", "python code", "write code"
                 ],
                 "patterns": [
+                    r"write opentrons.*code",
+                    r"opentrons.*api.*code",
+                    r"generate.*opentrons.*code",
+                    r"create.*opentrons.*script",
                     r"opentrons (protocol|script|code)",
                     r"generate (opentrons|ot-2|flex) (protocol|script)",
                     r"automate (.*) (process|procedure)",
@@ -160,15 +165,27 @@ class IntentClassifier:
         for intent_type, patterns in self.intent_patterns.items():
             score = 0.0
             
-            # Check keywords
-            for keyword in patterns["keywords"]:
-                if keyword in query_lower:
-                    score += 1.0
-            
-            # Check regex patterns
+            # Check regex patterns first (highest priority)
             for pattern in patterns["patterns"]:
                 if re.search(pattern, query_lower):
-                    score += 2.0  # Patterns are more specific than keywords
+                    score += 5.0  # Patterns are most specific
+            
+            # Check high-priority keywords for automation
+            if intent_type == IntentType.AUTOMATE:
+                high_priority_keywords = ["write code", "api v2", "api v1", "python code", "opentrons", "ot-2", "ot2"]
+                for keyword in high_priority_keywords:
+                    if keyword in query_lower:
+                        score += 3.0
+                
+                # Check other keywords
+                for keyword in patterns["keywords"]:
+                    if keyword not in high_priority_keywords and keyword in query_lower:
+                        score += 1.0
+            else:
+                # Check keywords for other intents
+                for keyword in patterns["keywords"]:
+                    if keyword in query_lower:
+                        score += 1.0
             
             intent_scores[intent_type] = score
         
@@ -391,7 +408,9 @@ Respond with JSON:
             "pressure", "enzyme", "protein", "dna", "rna", "pcr", "polymerase",
             "safety", "hazard", "toxic", "flammable", "corrosive", "ppe",
             "what is", "how to", "explain", "tell me", "create", "generate",
-            "make", "prepare", "analyze", "test", "measure", "calculate"
+            "make", "prepare", "analyze", "test", "measure", "calculate",
+            "code", "script", "program", "automate", "robot", "robotic", "ot-2", "ot2", "flex",
+            "96-well", "plate", "transfer", "dispense", "aspirate", "well", "wells"
         ]
         
         # Check for chemical formulas (capital letter + lowercase + numbers)
