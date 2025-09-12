@@ -83,6 +83,19 @@ class SmartRouter:
                 }
             
             # Step 3: Execute the appropriate agent
+            if classification.intent == IntentType.UNKNOWN:
+                # Handle unknown intents with a helpful default response
+                return {
+                    "success": True,
+                    "response": "Sorry, I can help you with chemistry and lab-related questions! I can assist with:\n\n• **Research questions** - Chemical compounds, reactions, properties\n• **Protocol generation** - Lab procedures and experimental methods\n• **Lab automation** - Opentrons protocols and automation scripts\n• **Safety analysis** - Chemical hazards and safety procedures\n\nPlease ask me something related to chemistry or laboratory work!",
+                    "classification": classification,
+                    "metadata": {
+                        "processed_at": datetime.now().isoformat(),
+                        "intent": "unknown",
+                        "confidence": classification.confidence
+                    }
+                }
+            
             agent_response = await self._execute_agent(classification.intent, query, context)
             
             # Step 4: Format the response
