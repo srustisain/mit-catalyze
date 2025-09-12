@@ -33,3 +33,4 @@ def get_available_prompts() -> list:
     """
     prompts_dir = Path(__file__).parent
     return [f.stem for f in prompts_dir.glob("*.txt") if f.name != "__init__.py"]
+
