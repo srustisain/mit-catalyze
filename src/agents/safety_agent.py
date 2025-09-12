@@ -44,53 +44,60 @@ Include:
 Prioritize safety and provide clear, actionable safety guidance.
 """
         
-        try:
-            # Get the main safety response
-            conversation_history = context.get("conversation_history", []) if context else []
-            safety_response = self.llm_client.generate_chat_response(safety_prompt, conversation_history)
-            self.logger.info(f"Generated safety response: {len(safety_response)} characters")
-            
-            # Try to enhance with chemical safety data
-            chembl_enhancement = ""
+        # Use the LangGraph agent with MCP tools directly
+        if self.agent and self.mcp_client:
             try:
-                agent_result = await self._run_agent_safely(query, context)
+                # Let the LangGraph agent handle the query with MCP tools
+                agent_result = await self._run_agent_safely(safety_prompt, context)
                 
                 if agent_result.get("success"):
-                    # Look for chemical safety data
+                    # Extract the response content
                     messages = agent_result.get("response", [])
-                    safety_data = []
+                    response_content = ""
                     
                     for message in messages:
                         if hasattr(message, 'content') and message.content:
-                            content = message.content
-                            if any(keyword in content.lower() for keyword in ["toxic", "hazard", "safety", "risk", "flammable", "corrosive"]):
-                                safety_data.append(content)
+                            response_content += message.content + "\n"
                     
-                    if safety_data:
-                        chembl_enhancement = "\n\n**Database Safety Information:**\n" + "\n".join(safety_data)
-                        self.logger.info(f"Added safety data: {len(chembl_enhancement)} characters")
-                
+                    return {
+                        "success": True,
+                        "response": response_content.strip(),
+                        "agent": self.name,
+                        "used_mcp": True,
+                        "timestamp": self._get_timestamp()
+                    }
+                else:
+                    # Fallback to basic LLM response
+                    return await self._fallback_response(safety_prompt, context)
+                    
             except Exception as e:
-                self.logger.error(f"ChEMBL enhancement failed: {e}")
-                chembl_enhancement = "\n\n(Note: Safety database access temporarily unavailable)"
-            
-            # Combine responses
-            final_response = safety_response + chembl_enhancement
+                self.logger.error(f"LangGraph agent failed: {e}")
+                return await self._fallback_response(safety_prompt, context)
+        else:
+            # Fallback to basic LLM response if no agent available
+            return await self._fallback_response(safety_prompt, context)
+    
+    async def _fallback_response(self, query: str, context: Dict[str, Any] = None) -> Dict[str, Any]:
+        """Fallback response when MCP tools are not available"""
+        try:
+            conversation_history = context.get("conversation_history", []) if context else []
+            response = self.llm_client.generate_chat_response(query, conversation_history)
+            self.logger.info(f"Generated fallback safety response: {len(response)} characters")
             
             return {
                 "success": True,
-                "response": final_response,
+                "response": response,
                 "agent": self.name,
-                "used_mcp": bool(chembl_enhancement),
+                "used_mcp": False,
                 "timestamp": self._get_timestamp()
             }
-            
         except Exception as e:
-            self.logger.error(f"Safety analysis failed: {e}")
+            self.logger.error(f"Fallback response failed: {e}")
             return {
                 "success": False,
-                "error": str(e),
+                "response": "I'm having trouble analyzing safety information right now.",
                 "agent": self.name,
+                "used_mcp": False,
                 "timestamp": self._get_timestamp()
             }
     

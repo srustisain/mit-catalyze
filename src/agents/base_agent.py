@@ -42,28 +42,52 @@ class BaseAgent(ABC):
                 self.agent = None
                 return
             
-            self.mcp_client = MultiServerMCPClient(MCP_SERVERS)
-            all_tools = await self.mcp_client.get_tools()
+            # Determine which MCP servers this agent should use
+            server_config = self._get_agent_server_config()
+            if not server_config:
+                self.logger.warning(f"No appropriate MCP servers for {self.name}")
+                self.mcp_client = None
+                self.agent = None
+                return
+            
+            # Create MCP client with only the relevant servers
+            self.mcp_client = MultiServerMCPClient(server_config)
+            available_tools = await self.mcp_client.get_tools()
             
             # Filter tools based on agent specialization
             if self.tools:
-                available_tools = [tool for tool in all_tools if tool.name in self.tools]
-            else:
-                available_tools = all_tools[:3]  # Limit to 3 tools to avoid context issues
+                available_tools = [tool for tool in available_tools if tool.name in self.tools]
             
-            # Further limit tools to prevent context overflow
-            available_tools = available_tools[:2]  # Maximum 2 tools per agent
+            self.logger.info(f"Initialized {self.name} with {len(available_tools)} tools from {list(server_config.keys())}")
             
-            self.logger.info(f"Initialized {self.name} with {len(available_tools)} tools")
-            
-            # Create LangGraph agent
-            self.agent = create_react_agent(OPENAI_MODEL, available_tools)
+            # No LangGraph agent - use direct MCP tool calls
+            self.agent = None
             
         except Exception as e:
             self.logger.warning(f"Failed to initialize {self.name} with MCP tools: {e}")
             self.logger.info(f"Initializing {self.name} without tools as fallback")
             self.mcp_client = None
             self.agent = None
+    
+    def _get_agent_server_config(self) -> Dict[str, Any]:
+        """Get the appropriate MCP server configuration for this agent"""
+        # ChEMBL tools for research, protocol, and safety agents
+        chembl_tools = ["search_compounds", "get_compound_info", "search_targets", "get_target_info", 
+                        "search_activities", "get_assay_info", "search_drugs", "get_drug_info"]
+        
+        # Opentrons tools for automate agent
+        opentrons_tools = ["fetch_general", "list_documents", "search_document"]
+        
+        # Check if this agent uses ChEMBL tools
+        if any(tool in self.tools for tool in chembl_tools):
+            return {"chembl": MCP_SERVERS["chembl"]}
+        
+        # Check if this agent uses Opentrons tools
+        if any(tool in self.tools for tool in opentrons_tools):
+            return {"opentrons": MCP_SERVERS["opentrons"]}
+        
+        # Default to no servers if no matching tools
+        return {}
     
     @abstractmethod
     async def process_query(self, query: str, context: Dict[str, Any] = None) -> Dict[str, Any]:
@@ -105,7 +129,7 @@ Always provide accurate, detailed responses and cite your sources when possible.
                     "timestamp": datetime.now().isoformat()
                 }
             
-            # Prepare the input for the agent
+            # Prepare the input for the agent with limited context
             agent_input = {
                 "messages": [
                     {"role": "system", "content": self.get_system_prompt()},
@@ -113,9 +137,21 @@ Always provide accurate, detailed responses and cite your sources when possible.
                 ]
             }
             
-            # Add context if provided
+            # Add limited context to avoid token overflow
             if context:
-                agent_input["context"] = context
+                # Only include recent conversation history (last 3 messages)
+                conversation_history = context.get("conversation_history", [])
+                if conversation_history:
+                    # Limit to last 3 messages to prevent context overflow
+                    recent_history = conversation_history[-3:] if len(conversation_history) > 3 else conversation_history
+                    agent_input["messages"].extend(recent_history)
+                
+                # Add other context but exclude large data
+                limited_context = {
+                    "mode": context.get("mode"),
+                    "timestamp": context.get("timestamp")
+                }
+                agent_input["context"] = limited_context
             
             # Run the agent
             result = await self.agent.ainvoke(agent_input)

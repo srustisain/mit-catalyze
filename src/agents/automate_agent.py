@@ -18,11 +18,6 @@ class AutomateAgent(BaseAgent):
             name="AutomateAgent",
             description="Specialized in creating lab automation scripts for robotic systems",
             tools=[
-                "search_compounds",
-                "get_compound_info",
-                "search_activities",
-                "get_assay_info", 
-                "search_drugs",
                 "fetch_general",
                 "list_documents",
                 "search_document"
@@ -69,7 +64,11 @@ class AutomateAgent(BaseAgent):
     
     def _is_opentrons_request(self, query: str) -> bool:
         """Check if the query is specifically for Opentrons automation"""
-        opentrons_keywords = ["opentrons", "ot-2", "ot2", "flex", "protocol", "pipette", "liquid handling"]
+        opentrons_keywords = [
+            "opentrons", "ot-2", "ot2", "flex", "protocol", "pipette", "liquid handling",
+            "write code", "generate code", "create code", "code for", "script for",
+            "automation", "robot", "robotic", "lab automation", "liquid handling robot"
+        ]
         query_lower = query.lower()
         return any(keyword in query_lower for keyword in opentrons_keywords)
     

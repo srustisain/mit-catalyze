@@ -62,60 +62,74 @@ Make it detailed, safe, and reproducible for laboratory use.
 {pdf_info}
 """
         
-        try:
-            # Get the main protocol response
-            conversation_history = context.get("conversation_history", []) if context else []
-            protocol_response = self.llm_client.generate_chat_response(protocol_prompt, conversation_history)
-            self.logger.info(f"Generated protocol response: {len(protocol_response)} characters")
-            
-            # Try to enhance with ChEMBL data for chemical information
-            chembl_enhancement = ""
+        # Use the LangGraph agent with MCP tools directly
+        if self.agent and self.mcp_client:
             try:
-                agent_result = await self._run_agent_safely(query, context)
+                # Let the LangGraph agent handle the query with MCP tools
+                agent_result = await self._run_agent_safely(protocol_prompt, context)
                 
                 if agent_result.get("success"):
-                    # Look for chemical data that could enhance the protocol
+                    # Extract the response content
                     messages = agent_result.get("response", [])
-                    chemical_data = []
+                    response_content = ""
                     
                     for message in messages:
                         if hasattr(message, 'content') and message.content:
-                            content = message.content
-                            if any(keyword in content.lower() for keyword in ["molecular weight", "formula", "structure", "properties"]):
-                                chemical_data.append(content)
+                            response_content += message.content + "\n"
                     
-                    if chemical_data:
-                        chembl_enhancement = "\n\n**Chemical Data for Protocol:**\n" + "\n".join(chemical_data)
-                        self.logger.info(f"Added chemical data: {len(chembl_enhancement)} characters")
-                
+                    # Store protocol for automation
+                    protocol_data = {
+                        "protocol_text": response_content.strip(),
+                        "timestamp": self._get_timestamp()
+                    }
+                    
+                    return {
+                        "success": True,
+                        "response": response_content.strip(),
+                        "agent": self.name,
+                        "used_mcp": True,
+                        "protocol_data": protocol_data,
+                        "timestamp": self._get_timestamp()
+                    }
+                else:
+                    # Fallback to basic LLM response
+                    return await self._fallback_response(protocol_prompt, context)
+                    
             except Exception as e:
-                self.logger.error(f"ChEMBL enhancement failed: {e}")
-                chembl_enhancement = "\n\n(Note: Chemical database access temporarily unavailable)"
-            
-            # Combine responses
-            final_response = protocol_response + chembl_enhancement
+                self.logger.error(f"LangGraph agent failed: {e}")
+                return await self._fallback_response(protocol_prompt, context)
+        else:
+            # Fallback to basic LLM response if no agent available
+            return await self._fallback_response(protocol_prompt, context)
+    
+    async def _fallback_response(self, query: str, context: Dict[str, Any] = None) -> Dict[str, Any]:
+        """Fallback response when MCP tools are not available"""
+        try:
+            conversation_history = context.get("conversation_history", []) if context else []
+            response = self.llm_client.generate_chat_response(query, conversation_history)
+            self.logger.info(f"Generated fallback protocol response: {len(response)} characters")
             
             # Store protocol for automation
             protocol_data = {
-                "protocol_text": final_response,
+                "protocol_text": response,
                 "timestamp": self._get_timestamp()
             }
             
             return {
                 "success": True,
-                "response": final_response,
+                "response": response,
                 "agent": self.name,
-                "used_mcp": bool(chembl_enhancement),
+                "used_mcp": False,
                 "protocol_data": protocol_data,
                 "timestamp": self._get_timestamp()
             }
-            
         except Exception as e:
-            self.logger.error(f"Protocol generation failed: {e}")
+            self.logger.error(f"Fallback response failed: {e}")
             return {
                 "success": False,
-                "error": str(e),
+                "response": "I'm having trouble generating the protocol right now.",
                 "agent": self.name,
+                "used_mcp": False,
                 "timestamp": self._get_timestamp()
             }
     
