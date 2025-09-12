@@ -70,3 +70,4 @@ def get_logger(name: str) -> logging.Logger:
 
 # Initialize logging on import
 setup_logging()
+
