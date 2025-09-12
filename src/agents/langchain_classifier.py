@@ -10,8 +10,6 @@ from typing import Dict, List, Optional, Any
 from dataclasses import dataclass
 from enum import Enum
 
-from langchain.classifiers import TextClassifier
-from langchain.llms import OpenAI
 from langchain.prompts import PromptTemplate
 from langchain.chains import LLMChain
 from langchain.schema import BaseMessage, HumanMessage, SystemMessage
@@ -51,11 +49,10 @@ class LangChainIntentClassifier:
     
     def _setup_classifier(self):
         """Setup the LangChain text classifier"""
-        # Create a custom classifier using LangChain's TextClassifier
-        self.classifier = TextClassifier(
+        # Create a custom classifier using LLMChain
+        self.classifier = LLMChain(
             llm=self.llm_client.openai_client,
-            categories=["research", "protocol", "automate", "safety"],
-            prompt_template=self._create_classification_prompt()
+            prompt=self._create_classification_prompt()
         )
     
     def _setup_entity_extractor(self):
@@ -158,11 +155,16 @@ Respond with only the category name (research, protocol, automate, or safety).
             )
     
     async def _classify_with_langchain(self, query: str) -> str:
-        """Use LangChain's TextClassifier for classification"""
+        """Use LangChain's LLMChain for classification"""
         try:
             # Use the classifier
-            result = await self.classifier.aclassify(query)
-            return result.lower()
+            result = await self.classifier.arun(text=query)
+            # Extract category from result
+            result_lower = result.lower().strip()
+            for category in ["research", "protocol", "automate", "safety"]:
+                if category in result_lower:
+                    return category
+            return "unknown"
         except Exception as e:
             self.logger.error(f"LangChain classifier failed: {e}")
             return "unknown"
