@@ -4,6 +4,7 @@ import json
 import re
 import requests
 from src.config.config import OPENAI_API_KEY, CEREBRAS_API_KEY, HUGGINGFACE_API_KEY, LLM_PROVIDER, OPENAI_MODEL, CEREBRAS_MODEL, HUGGINGFACE_MODEL
+from src.config.logging_config import get_logger
 
 class LLMClient:
     """Client for interacting with LLM APIs"""
@@ -18,6 +19,7 @@ class LLMClient:
         self.provider = provider or LLM_PROVIDER or "openai"
         self.openai_key = OPENAI_API_KEY
         self.cerebras_key = CEREBRAS_API_KEY
+        self.logger = get_logger("catalyze.llm_client")
         self.huggingface_key = HUGGINGFACE_API_KEY
         
         # Initialize OpenAI client if key is available
@@ -64,7 +66,7 @@ class LLMClient:
                 return self._get_demo_protocol(query, chemical_data, explain_mode)
                 
         except Exception as e:
-            print(f"Error generating protocol with {self.provider}: {e}")
+            self.logger.error(f"Error generating protocol with {self.provider}: {e}")
             return self._get_demo_protocol(query, chemical_data, explain_mode)
     
     def _call_cerebras_api(self, prompt: str) -> str:
@@ -89,7 +91,7 @@ class LLMClient:
         return response.json()["choices"][0]["message"]["content"]
     
     def _call_huggingface_api(self, prompt: str) -> str:
-        print("Got here")
+        self.logger.debug("Calling Hugging Face API")
         """Call Hugging Face API"""
         url = f"https://api-inference.huggingface.co/models/{HUGGINGFACE_MODEL}"
         headers = {
@@ -329,7 +331,7 @@ Format your response as JSON with the following structure:
                 return "This is a chemical reaction. The reactants combine to form products under specific conditions."
                 
         except Exception as e:
-            print(f"Error explaining reaction with {self.provider}: {e}")
+            self.logger.error(f"Error explaining reaction with {self.provider}: {e}")
             return "This is a chemical reaction. The reactants combine to form products under specific conditions."
     
     def validate_protocol(self, protocol: str) -> Dict[str, Any]:
@@ -379,7 +381,7 @@ Format your response as JSON with the following structure:
                 }
                 
         except Exception as e:
-            print(f"Error validating protocol with {self.provider}: {e}")
+            self.logger.error(f"Error validating protocol with {self.provider}: {e}")
             return {
                 "valid": False,
                 "warnings": ["Validation failed"],
@@ -440,7 +442,7 @@ Format your response as JSON with the following structure:
                 return "I'm sorry, but I'm not able to respond right now. Please check if the LLM service is properly configured."
                 
         except Exception as e:
-            print(f"Error generating chat response with {self.provider}: {e}")
+            self.logger.error(f"Error generating chat response with {self.provider}: {e}")
             return "I apologize, but I encountered an error while processing your message. Please try again."
 
     def generate_response(self, prompt: str, system_message: str = "You are a helpful chemistry assistant.") -> str:
@@ -473,5 +475,5 @@ Format your response as JSON with the following structure:
                 return "LLM service not available. Please configure API keys."
                 
         except Exception as e:
-            print(f"Error generating response with {self.provider}: {e}")
+            self.logger.error(f"Error generating response with {self.provider}: {e}")
             return "Error generating response. Please try again."

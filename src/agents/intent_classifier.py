@@ -17,6 +17,7 @@ import re
 import json
 
 from src.clients.llm_client import LLMClient
+from src.config.logging_config import get_logger
 
 
 class IntentType(Enum):
@@ -42,7 +43,7 @@ class IntentClassifier:
     
     def __init__(self, llm_client: LLMClient = None):
         self.llm_client = llm_client or LLMClient()
-        self.logger = logging.getLogger("catalyze.intent_classifier")
+        self.logger = get_logger("catalyze.intent_classifier")
         
         # Define keywords and patterns for each intent
         self.intent_patterns = {
@@ -430,14 +431,15 @@ async def test_intent_classifier():
         "What PPE should I wear for this experiment?"
     ]
     
-    print("🧪 Testing Intent Classifier...")
+    logger = get_logger("catalyze.test.intent_classifier")
+    logger.info("🧪 Testing Intent Classifier...")
     for query in test_queries:
         result = await classifier.classify(query)
-        print(f"Query: {query}")
-        print(f"Intent: {result.intent.value} (confidence: {result.confidence:.2f})")
-        print(f"Entities: {result.entities}")
-        print(f"Reasoning: {result.reasoning}")
-        print("-" * 50)
+        logger.info(f"Query: {query}")
+        logger.info(f"Intent: {result.intent.value} (confidence: {result.confidence:.2f})")
+        logger.info(f"Entities: {result.entities}")
+        logger.info(f"Reasoning: {result.reasoning}")
+        logger.info("-" * 50)
 
 
 if __name__ == "__main__":

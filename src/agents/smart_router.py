@@ -16,6 +16,7 @@ from .protocol_agent import ProtocolAgent
 from .automate_agent import AutomateAgent
 from .safety_agent import SafetyAgent
 from src.clients.llm_client import LLMClient
+from src.config.logging_config import get_logger
 
 
 class RouterState(TypedDict):
@@ -34,7 +35,7 @@ class SmartRouter:
     
     def __init__(self, llm_client: LLMClient = None):
         self.llm_client = llm_client or LLMClient()
-        self.logger = logging.getLogger("catalyze.smart_router")
+        self.logger = get_logger("catalyze.smart_router")
         
         # Initialize components
         self.intent_classifier = IntentClassifier(llm_client)
@@ -191,15 +192,16 @@ async def test_smart_router():
         "Create a protein extraction protocol"
     ]
     
-    print("🧪 Testing Smart Router...")
+    logger = get_logger("catalyze.test.smart_router")
+    logger.info("🧪 Testing Smart Router...")
     for query in test_queries:
-        print(f"\nQuery: {query}")
+        logger.info(f"\nQuery: {query}")
         result = await router.process_query(query)
-        print(f"Success: {result['success']}")
-        print(f"Response: {result['response'][:200]}...")
+        logger.info(f"Success: {result['success']}")
+        logger.info(f"Response: {result['response'][:200]}...")
         if result.get('classification'):
-            print(f"Classified as: {result['classification'].intent.value}")
-        print("-" * 50)
+            logger.info(f"Classified as: {result['classification'].intent.value}")
+        logger.info("-" * 50)
 
 
 if __name__ == "__main__":

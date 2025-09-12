@@ -133,8 +133,6 @@ Make it detailed, safe, and reproducible for laboratory use.
                 "timestamp": self._get_timestamp()
             }
     
-    def get_system_prompt(self) -> str:
-        return """You are a laboratory protocol specialist. Generate detailed, step-by-step lab procedures for synthesis, analysis, and experiments. Always include safety precautions, materials, quantities, temperatures, and timing. Make protocols clear, safe, and reproducible."""
     
     def _get_timestamp(self):
         """Get current timestamp"""

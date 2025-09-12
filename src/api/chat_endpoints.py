@@ -26,95 +26,96 @@ class ChatEndpoints:
         self.openai_client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
     
     def _clean_text_formatting(self, text: str) -> str:
-        """Remove markdown formatting and improve line breaks for better readability"""
-        if not text:
-            return text
-        
-        # Remove markdown formatting
-        text = text.replace('**', '')  # Remove bold markers
-        text = text.replace('*', '')   # Remove italic markers
-        text = text.replace('##', '')  # Remove header markers
-        text = text.replace('#', '')   # Remove remaining header markers
-        text = text.replace('`', '')   # Remove code markers
-        text = text.replace('__', '')  # Remove underline markers
-        text = text.replace('_', '')   # Remove remaining underline markers
-        
-        # Improve line breaks - ensure proper spacing
-        text = text.replace('\n\n\n', '\n\n')  # Remove triple line breaks
-        text = text.replace('\n\n\n\n', '\n\n')  # Remove quadruple line breaks
-        text = text.replace('\n\n\n\n\n', '\n\n')  # Remove quintuple line breaks
-        
-        # Add line breaks before common section headers
-        text = text.replace('Database Safety Information:', '\n\nDatabase Safety Information:')
-        text = text.replace('Additional Database Information:', '\n\nAdditional Database Information:')
-        text = text.replace('Chemical Data for Protocol:', '\n\nChemical Data for Protocol:')
-        text = text.replace('Chemical Parameters for Automation:', '\n\nChemical Parameters for Automation:')
-        text = text.replace('PDF Document Context:', '\n\nPDF Document Context:')
-        
-        # Clean up repetitive content that might appear
-        text = text.replace('ChEMBL Database: You are a Research Agent specialized in chemistry research and explanations.', '')
-        text = text.replace('Your capabilities include:', '\n\nYour capabilities include:')
-        text = text.replace('When answering questions:', '\n\nWhen answering questions:')
-        text = text.replace('Always prioritize accuracy and provide comprehensive information.', '')
-        
-        # Remove verbose ChEMBL JSON data that clutters responses
-        if 'ChEMBL Database: {' in text:
-            # Find the start and end of the JSON block
-            start = text.find('ChEMBL Database: {')
-            if start != -1:
-                # Find the end of the JSON block (look for the closing brace)
-                brace_count = 0
-                end = start
-                for i, char in enumerate(text[start:], start):
-                    if char == '{':
-                        brace_count += 1
-                    elif char == '}':
-                        brace_count -= 1
-                        if brace_count == 0:
-                            end = i + 1
-                            break
-                
-                if end > start:
-                    # Replace the entire JSON block with a cleaner summary
-                    json_block = text[start:end]
-                    text = text.replace(json_block, '\n\nAdditional Database Information:\nDetailed chemical data retrieved from ChEMBL database.')
-        
-        # Fix line breaks for lists and structured content
-        text = text.replace('- ', '\n- ')  # Ensure bullet points are on new lines
-        text = text.replace('1. ', '\n1. ')  # Ensure numbered lists are on new lines
-        text = text.replace('2. ', '\n2. ')  # Ensure numbered lists are on new lines
-        text = text.replace('3. ', '\n3. ')  # Ensure numbered lists are on new lines
-        text = text.replace('4. ', '\n4. ')  # Ensure numbered lists are on new lines
-        text = text.replace('5. ', '\n5. ')  # Ensure numbered lists are on new lines
-        
-        # Fix line breaks for common patterns
-        text = text.replace('• ', '\n• ')  # Ensure bullet points are on new lines
-        text = text.replace('* ', '\n* ')  # Ensure asterisk lists are on new lines
-        
-        # Clean up any remaining formatting artifacts
-        text = text.replace('  ', ' ')  # Remove double spaces
-        text = text.replace('\n ', '\n')  # Remove spaces at start of lines
-        text = text.replace(' \n', '\n')  # Remove spaces at end of lines
-        text = text.strip()  # Remove leading/trailing whitespace
-        
-        # Remove empty lines at the beginning
-        while text.startswith('\n'):
-            text = text[1:]
-        
-        # Ensure proper spacing between list items
-        text = text.replace('\n-', '\n\n-')  # Add space before bullet points
-        text = text.replace('\n1.', '\n\n1.')  # Add space before numbered items
-        text = text.replace('\n2.', '\n\n2.')  # Add space before numbered items
-        text = text.replace('\n3.', '\n\n3.')  # Add space before numbered items
-        text = text.replace('\n4.', '\n\n4.')  # Add space before numbered items
-        text = text.replace('\n5.', '\n\n5.')  # Add space before numbered items
-        text = text.replace('\n•', '\n\n•')  # Add space before bullet points
-        text = text.replace('\n*', '\n\n*')  # Add space before asterisk points
-        
-        # Clean up any triple line breaks that might have been created
-        text = text.replace('\n\n\n', '\n\n')
-        
+        """Clean text formatting while preserving markdown for better readability"""
         return text
+        # if not text:
+        #     return text
+        
+        # # # Remove markdown formatting
+        # # text = text.replace('**', '')  # Remove bold markers
+        # # text = text.replace('*', '')   # Remove italic markers
+        # # text = text.replace('##', '')  # Remove header markers
+        # # text = text.replace('#', '')   # Remove remaining header markers
+        # # text = text.replace('`', '')   # Remove code markers
+        # # text = text.replace('__', '')  # Remove underline markers
+        # # text = text.replace('_', '')   # Remove remaining underline markers
+        
+        # # Improve line breaks - ensure proper spacing
+        # # text = text.replace('\n\n\n', '\n\n')  # Remove triple line breaks
+        # # text = text.replace('\n\n\n\n', '\n\n')  # Remove quadruple line breaks
+        # # text = text.replace('\n\n\n\n\n', '\n\n')  # Remove quintuple line breaks
+        
+        # # Add line breaks before common section headers
+        # text = text.replace('Database Safety Information:', '\n\nDatabase Safety Information:')
+        # text = text.replace('Additional Database Information:', '\n\nAdditional Database Information:')
+        # text = text.replace('Chemical Data for Protocol:', '\n\nChemical Data for Protocol:')
+        # text = text.replace('Chemical Parameters for Automation:', '\n\nChemical Parameters for Automation:')
+        # text = text.replace('PDF Document Context:', '\n\nPDF Document Context:')
+        
+        # # Clean up repetitive content that might appear
+        # text = text.replace('ChEMBL Database: You are a Research Agent specialized in chemistry research and explanations.', '')
+        # text = text.replace('Your capabilities include:', '\n\nYour capabilities include:')
+        # text = text.replace('When answering questions:', '\n\nWhen answering questions:')
+        # text = text.replace('Always prioritize accuracy and provide comprehensive information.', '')
+        
+        # # Remove verbose ChEMBL JSON data that clutters responses
+        # if 'ChEMBL Database: {' in text:
+        #     # Find the start and end of the JSON block
+        #     start = text.find('ChEMBL Database: {')
+        #     if start != -1:
+        #         # Find the end of the JSON block (look for the closing brace)
+        #         brace_count = 0
+        #         end = start
+        #         for i, char in enumerate(text[start:], start):
+        #             if char == '{':
+        #                 brace_count += 1
+        #             elif char == '}':
+        #                 brace_count -= 1
+        #                 if brace_count == 0:
+        #                     end = i + 1
+        #                     break
+                
+        #         if end > start:
+        #             # Replace the entire JSON block with a cleaner summary
+        #             json_block = text[start:end]
+        #             text = text.replace(json_block, '\n\nAdditional Database Information:\nDetailed chemical data retrieved from ChEMBL database.')
+        
+        # # Fix line breaks for lists and structured content
+        # text = text.replace('- ', '\n- ')  # Ensure bullet points are on new lines
+        # text = text.replace('1. ', '\n1. ')  # Ensure numbered lists are on new lines
+        # text = text.replace('2. ', '\n2. ')  # Ensure numbered lists are on new lines
+        # text = text.replace('3. ', '\n3. ')  # Ensure numbered lists are on new lines
+        # text = text.replace('4. ', '\n4. ')  # Ensure numbered lists are on new lines
+        # text = text.replace('5. ', '\n5. ')  # Ensure numbered lists are on new lines
+        
+        # # Fix line breaks for common patterns
+        # text = text.replace('• ', '\n• ')  # Ensure bullet points are on new lines
+        # text = text.replace('* ', '\n* ')  # Ensure asterisk lists are on new lines
+        
+        # # Clean up any remaining formatting artifacts
+        # text = text.replace('  ', ' ')  # Remove double spaces
+        # text = text.replace('\n ', '\n')  # Remove spaces at start of lines
+        # text = text.replace(' \n', '\n')  # Remove spaces at end of lines
+        # text = text.strip()  # Remove leading/trailing whitespace
+        
+        # # Remove empty lines at the beginning
+        # while text.startswith('\n'):
+        #     text = text[1:]
+        
+        # # Ensure proper spacing between list items
+        # text = text.replace('\n-', '\n\n-')  # Add space before bullet points
+        # text = text.replace('\n1.', '\n\n1.')  # Add space before numbered items
+        # text = text.replace('\n2.', '\n\n2.')  # Add space before numbered items
+        # text = text.replace('\n3.', '\n\n3.')  # Add space before numbered items
+        # text = text.replace('\n4.', '\n\n4.')  # Add space before numbered items
+        # text = text.replace('\n5.', '\n\n5.')  # Add space before numbered items
+        # text = text.replace('\n•', '\n\n•')  # Add space before bullet points
+        # text = text.replace('\n*', '\n\n*')  # Add space before asterisk points
+        
+        # # Clean up any triple line breaks that might have been created
+        # text = text.replace('\n\n\n', '\n\n')
+        
+        # return text
     
     async def initialize(self):
         """Initialize the pipeline manager"""
@@ -326,7 +327,7 @@ class ChatEndpoints:
                 messages=[
                     {
                         "role": "system",
-                        "content": "You are a scientific document analyzer. Analyze and summarize the key content from this scientific document. Focus on:\n\n1. **Document Overview**: Title, authors, publication details\n2. **Abstract/Summary**: Main objectives and findings\n3. **Key Methods**: Experimental procedures and techniques\n4. **Results & Data**: Important findings, measurements, observations\n5. **Conclusions**: Main conclusions and implications\n6. **Chemical Information**: Compounds, reactions, molecular structures, properties\n7. **Safety Information**: Hazards, precautions, safety measures\n\nProvide a clear, structured summary that can be referenced when answering questions about this document. Be specific and include relevant numbers, formulas, and technical details."
+                        "content": "You are a scientific document analyzer. Analyze and summarize the key content from this scientific document. Focus on:\n\n1. **Document Overview**: Title, authors, publication details\n2. **Abstract/Summary**: Main objectives and findings\n3. **Key Methods**: Experimental procedures and techniques\n4. **Results & Data**: Important findings, measurements, observations\n5. **Conclusions**: Main conclusions and implications\n6. **Chemical Information**: Compounds, reactions, molecular structures, properties\n7. **Safety Information**: Hazards, precautions, safety measures\n\nProvide a clear, structured summary that can be referenced when answering questions about this document. Be specific and include relevant numbers, formulas, and technical details. Please format your response in well-structured markdown for better readability."
                     },
                     {
                         "role": "user",

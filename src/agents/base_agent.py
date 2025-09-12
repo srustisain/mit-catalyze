@@ -17,6 +17,8 @@ from src.clients.llm_client import LLMClient
 from src.config.config import OPENAI_MODEL, MCP_SERVERS
 from langchain_mcp_adapters.client import MultiServerMCPClient
 from langgraph.prebuilt import create_react_agent
+from src.prompts import load_prompt
+from src.config.logging_config import get_logger
 
 
 class BaseAgent(ABC):
@@ -27,7 +29,7 @@ class BaseAgent(ABC):
         self.description = description
         self.tools = tools or []
         self.llm_client = LLMClient(provider="openai")
-        self.logger = logging.getLogger(f"catalyze.{name.lower()}")
+        self.logger = get_logger(f"catalyze.{name.lower()}")
         
         # MCP client for tool access
         self.mcp_client = None
@@ -105,12 +107,22 @@ class BaseAgent(ABC):
     
     def get_system_prompt(self) -> str:
         """Get the system prompt for this agent"""
-        return f"""You are {self.name}, a specialized AI agent for chemistry tasks.
+        try:
+            # Try to load from prompt file first
+            # Convert class name to file name (e.g., ResearchAgent -> research_agent)
+            class_name = self.__class__.__name__
+            file_name = class_name.lower().replace('agent', '_agent')
+            prompt_template = load_prompt(file_name)
+            return prompt_template
+        except FileNotFoundError:
+            # Fallback to default prompt if file not found
+            return f"""You are {self.name}, a specialized AI agent for chemistry tasks.
 
 {self.description}
 
 You have access to specialized tools and databases to help with your tasks.
 Always provide accurate, detailed responses and cite your sources when possible.
+Please format your responses in well-structured markdown for better readability.
 """
     
     async def _run_agent_safely(self, query: str, context: Dict[str, Any] = None) -> Dict[str, Any]:
@@ -129,6 +141,7 @@ Always provide accurate, detailed responses and cite your sources when possible.
                     "timestamp": datetime.now().isoformat()
                 }
             
+            self.logger.debug(f"System prompt: {self.get_system_prompt()}")
             # Prepare the input for the agent with limited context
             agent_input = {
                 "messages": [

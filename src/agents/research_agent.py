@@ -174,8 +174,6 @@ class ResearchAgent(BaseAgent):
         
         return "\n".join(result)
     
-    def get_system_prompt(self) -> str:
-        return """You are a chemistry research specialist. Answer questions about chemical properties, reactions, mechanisms, and compounds. Use ChEMBL tools for accurate data. Provide clear explanations with chemical formulas, structures, and relevant properties."""
     
     def _get_timestamp(self):
         """Get current timestamp"""

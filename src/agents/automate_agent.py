@@ -226,11 +226,8 @@ Make the code production-ready and well-documented.
 
 Generated in {attempts} attempt(s) with validation.
 
-```python
 {code}
-```
-
-**Validation Status:** ✅ Passed
+**Validation Status:** ✅ {generation_result["validation_result"]}
 **Simulation Time:** {validation_result.simulation_time:.2f}s
 
 """
@@ -242,8 +239,6 @@ Generated in {attempts} attempt(s) with validation.
         
         return response
     
-    def get_system_prompt(self) -> str:
-        return """You are a lab automation specialist. Use opentrons docs tools available via the mcp server. Generate Python code for Opentrons robots and other lab automation equipment. Create production-ready scripts with proper error handling, safety checks, and detailed comments. Use accurate chemical parameters and optimize for efficiency."""
     
     def _get_timestamp(self):
         """Get current timestamp"""
