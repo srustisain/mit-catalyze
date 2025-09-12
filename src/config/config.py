@@ -43,6 +43,13 @@ MCP_SERVERS = {
         "args": ["mcp_servers/chembl-mcp-server/build/index.js"]
     },
     
+    # Opentrons MCP Server (stdio-based)
+    "opentrons": {
+        "transport": "stdio",
+        "command": "node",
+        "args": ["mcp_servers/opentrons-mcp-server/dist/index.js"]
+    },
+    
     # Example HTTP-based MCP servers (commented out for now)
     # "literature": {
     #     "transport": "streamable_http", 
