@@ -3,7 +3,7 @@ from typing import Dict, List, Optional, Any
 import json
 import re
 import requests
-from config.config import OPENAI_API_KEY, CEREBRAS_API_KEY, HUGGINGFACE_API_KEY, LLM_PROVIDER, OPENAI_MODEL, CEREBRAS_MODEL, HUGGINGFACE_MODEL
+from src.config.config import OPENAI_API_KEY, CEREBRAS_API_KEY, HUGGINGFACE_API_KEY, LLM_PROVIDER, OPENAI_MODEL, CEREBRAS_MODEL, HUGGINGFACE_MODEL
 
 class LLMClient:
     """Client for interacting with LLM APIs"""
