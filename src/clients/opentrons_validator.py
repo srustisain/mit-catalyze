@@ -240,7 +240,7 @@ class OpentronsCodeGenerator:
                     }
                 else:
                     self.logger.warning(f"Validation failed on attempt {attempt + 1}: {validation_result.errors}")
-                    
+                
                 if attempt < max_retries:
                     # Prepare improved instructions for next attempt
                     improved_instructions = self._improve_instructions(
@@ -310,8 +310,27 @@ Generate the complete Python code for the protocol:
             return "Opentrons documentation not available (MCP client not initialized)"
         
         try:
-            # Get general Opentrons information
-            general_info = await self.mcp_client.call_tool("opentrons", "fetch_general", {})
+            # Get available tools from MCP client
+            tools = await self.mcp_client.get_tools()
+            
+            # Find Opentrons-related tools
+            opentrons_tools = [tool for tool in tools if 'opentrons' in tool.name.lower() or 'fetch_general' in tool.name.lower()]
+            
+            if not opentrons_tools:
+                return "No Opentrons tools available"
+            
+            # Try to get general information
+            general_info = ""
+            for tool in opentrons_tools:
+                if 'fetch_general' in tool.name.lower():
+                    try:
+                        result = await tool.ainvoke({})
+                        if result:
+                            general_info = str(result)
+                            break
+                    except Exception as e:
+                        self.logger.warning(f"Failed to call {tool.name}: {e}")
+                        continue
             
             # Search for relevant documentation based on instructions
             docs_to_search = []
@@ -327,32 +346,48 @@ Generate the complete Python code for the protocol:
                 docs_to_search = ["pd-manual", "flex-manual"]
             
             relevant_docs = []
+            
+            # Try to find list_documents and search_document tools
+            list_tool = None
+            search_tool = None
+            
+            for tool in tools:
+                if 'list_documents' in tool.name.lower():
+                    list_tool = tool
+                elif 'search_document' in tool.name.lower():
+                    search_tool = tool
+            
             for category in docs_to_search:
                 try:
                     # List documents in category
-                    doc_list = await self.mcp_client.call_tool("opentrons", "list_documents", {"category": category})
-                    if doc_list and "content" in doc_list:
-                        relevant_docs.append(f"Category {category}: {doc_list['content']}")
+                    if list_tool:
+                        doc_list = await list_tool.ainvoke({"category": category})
+                        if doc_list:
+                            relevant_docs.append(f"Category {category}: {str(doc_list)}")
                     
                     # Search for specific documents
-                    search_terms = ["protocol", "api", "python", "labware", "pipette"]
-                    for term in search_terms:
-                        if term in instructions.lower():
-                            try:
-                                doc_content = await self.mcp_client.call_tool("opentrons", "search_document", {
-                                    "filename": f"{term}.md",
-                                    "category": category
-                                })
-                                if doc_content and "content" in doc_content:
-                                    relevant_docs.append(f"Document {term}: {doc_content['content'][:1000]}...")
-                            except:
-                                pass  # Document might not exist
+                    if search_tool:
+                        search_result = await search_tool.ainvoke({
+                            "category": category,
+                            "query": instructions
+                        })
+                        if search_result:
+                            relevant_docs.append(f"Search results for '{instructions}': {str(search_result)}")
+                        
                 except Exception as e:
-                    self.logger.warning(f"Failed to get docs for category {category}: {e}")
+                    self.logger.warning(f"Failed to get documentation for category {category}: {e}")
+                    continue
             
             # Combine all documentation
-            all_docs = [general_info.get("content", "")] + relevant_docs
-            return "\n\n".join(filter(None, all_docs))
+            all_docs = []
+            if general_info:
+                all_docs.append(f"General Opentrons Info: {general_info}")
+            all_docs.extend(relevant_docs)
+            
+            if all_docs:
+                return "\n\n".join(all_docs)
+            else:
+                return "No specific Opentrons documentation found for this query"
             
         except Exception as e:
             self.logger.error(f"Failed to get Opentrons documentation: {e}")

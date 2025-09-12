@@ -244,25 +244,7 @@ Generated in {attempts} attempt(s) with validation.
         return response
     
     def get_system_prompt(self) -> str:
-        return """You are an Automate Agent specialized in creating lab automation scripts.
-
-Your capabilities include:
-- Generating Python code for Opentrons liquid handling robots
-- Creating PyHamilton automation scripts
-- Writing protocols for robotic lab equipment
-- Designing automated experimental workflows
-- Accessing chemical databases for accurate parameters
-
-When creating automation scripts:
-1. Use proper Python syntax and best practices
-2. Include comprehensive error handling
-3. Add detailed comments explaining each step
-4. Consider safety and validation checks
-5. Optimize for efficiency and reliability
-6. Include proper import statements
-7. Use accurate chemical parameters from databases
-
-Focus on creating production-ready, safe, and efficient automation code."""
+        return """You are a lab automation specialist. Use opentrons docs tools available via the mcp server. Generate Python code for Opentrons robots and other lab automation equipment. Create production-ready scripts with proper error handling, safety checks, and detailed comments. Use accurate chemical parameters and optimize for efficiency."""
     
     def _get_timestamp(self):
         """Get current timestamp"""

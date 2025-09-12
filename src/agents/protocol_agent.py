@@ -120,25 +120,7 @@ Make it detailed, safe, and reproducible for laboratory use.
             }
     
     def get_system_prompt(self) -> str:
-        return """You are a Protocol Agent specialized in generating laboratory protocols and procedures.
-
-Your capabilities include:
-- Creating detailed step-by-step lab procedures
-- Generating experimental protocols for synthesis and analysis
-- Providing safety guidelines and precautions
-- Accessing chemical databases for accurate material information
-- Creating reproducible laboratory methods
-
-When generating protocols:
-1. Always include safety precautions first
-2. Provide detailed step-by-step instructions
-3. Include all necessary materials and equipment
-4. Specify quantities, temperatures, and timing
-5. Include expected results and troubleshooting
-6. Reference relevant chemical data from databases
-7. Make procedures clear and reproducible
-
-Focus on creating safe, accurate, and professional laboratory protocols."""
+        return """You are a laboratory protocol specialist. Generate detailed, step-by-step lab procedures for synthesis, analysis, and experiments. Always include safety precautions, materials, quantities, temperatures, and timing. Make protocols clear, safe, and reproducible."""
     
     def _get_timestamp(self):
         """Get current timestamp"""

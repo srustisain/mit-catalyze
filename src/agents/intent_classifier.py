@@ -121,6 +121,17 @@ class IntentClassifier:
         """
         self.logger.info(f"Classifying query: {query[:100]}...")
         
+        # Step 0: Content guardrails - check if query is chemistry/lab related
+        if not self._is_chemistry_related(query):
+            self.logger.warning(f"Query rejected by guardrails: {query[:50]}...")
+            return ClassificationResult(
+                intent=IntentType.UNKNOWN,
+                confidence=1.0,
+                reasoning="Query is not chemistry or lab-related",
+                entities=[],
+                secondary_intents=[]
+            )
+        
         # Step 1: Rule-based classification
         rule_result = self._rule_based_classification(query)
         
@@ -215,29 +226,24 @@ class IntentClassifier:
             context_str = f"\nConversation context: {context['conversation_history'][-3:]}"
         
         prompt = f"""
-Classify the following chemistry/lab query into one of these categories:
+Classify this chemistry/lab query into one of these categories:
 
-1. RESEARCH: Questions about chemical properties, mechanisms, explanations, compound lookups
-2. PROTOCOL: Requests for lab procedures, synthesis methods, experimental protocols
-3. AUTOMATE: Requests for lab automation scripts, Opentrons protocols, robotic systems
+1. RESEARCH: Chemical properties, mechanisms, explanations, compound lookups
+2. PROTOCOL: Lab procedures, synthesis methods, experimental protocols  
+3. AUTOMATE: Lab automation scripts, Opentrons protocols, robotic systems
 4. SAFETY: Safety questions, hazard assessments, PPE recommendations
+5. UNKNOWN: Non-chemistry or non-lab related queries
 
 Query: "{query}"
 {context_str}
 
-Respond with a JSON object containing:
+Respond with JSON:
 {{
-    "intent": "research|protocol|automate|safety",
+    "intent": "research|protocol|automate|safety|unknown",
     "confidence": 0.0-1.0,
-    "reasoning": "Brief explanation of classification",
-    "entities": ["list", "of", "extracted", "entities"]
+    "reasoning": "Brief explanation",
+    "entities": ["extracted", "entities"]
 }}
-
-Consider:
-- Research: "What is the molecular weight of caffeine?", "Explain PCR mechanism"
-- Protocol: "How to synthesize aspirin?", "Create a protein extraction protocol"
-- Automate: "Generate Opentrons protocol for liquid handling", "Automate 96-well plate filling"
-- Safety: "Is this chemical combination safe?", "What PPE for this experiment?"
 """
         return prompt
     
@@ -351,6 +357,61 @@ Consider:
             IntentType.UNKNOWN: "Unable to classify query"
         }
         return descriptions.get(intent, "Unknown intent")
+    
+    def _is_chemistry_related(self, query: str) -> bool:
+        """
+        Simple check if a query could be related to chemistry or lab work.
+        Uses very basic pattern matching and accepts most queries that could be chemistry-related.
+        """
+        query_lower = query.lower()
+        
+        # Check for obvious non-chemistry topics that should be rejected
+        non_chemistry_indicators = [
+            "depression", "anxiety", "mental health", "therapy", "counseling",
+            "weather", "sports", "politics", "religion", "philosophy",
+            "cooking", "recipe", "food", "restaurant", "travel", "vacation",
+            "entertainment", "movie", "music", "book", "game", "hobby",
+            "car", "vehicle", "repair", "fix", "maintenance"
+        ]
+        
+        # If it contains obvious non-chemistry topics, reject
+        if any(indicator in query_lower for indicator in non_chemistry_indicators):
+            return False
+        
+        # Check for chemistry indicators
+        chemistry_indicators = [
+            "chemical", "compound", "molecule", "element", "formula", "structure",
+            "reaction", "synthesis", "catalyst", "solvent", "reagent", "product",
+            "laboratory", "lab", "experiment", "protocol", "procedure", "method",
+            "pipette", "beaker", "flask", "centrifuge", "spectrometer",
+            "chromatography", "distillation", "extraction", "purification",
+            "opentrons", "automation", "liquid handling", "ph", "concentration",
+            "molarity", "molar", "mass", "volume", "density", "temperature",
+            "pressure", "enzyme", "protein", "dna", "rna", "pcr", "polymerase",
+            "safety", "hazard", "toxic", "flammable", "corrosive", "ppe",
+            "what is", "how to", "explain", "tell me", "create", "generate",
+            "make", "prepare", "analyze", "test", "measure", "calculate"
+        ]
+        
+        # Check for chemical formulas (capital letter + lowercase + numbers)
+        chemical_formulas = re.findall(r'\b[A-Z][a-z]?\d*\b', query)
+        
+        # Check for lab units
+        lab_units = re.findall(r'\b\d+\s*(mg|g|kg|ml|l|ul|μl|molar|m|mm|nm|pm|°c|°f|k|bar|psi|torr|atm)\b', query_lower)
+        
+        # Check for pH values
+        ph_values = re.findall(r'\bph\s*[=:]?\s*\d+\.?\d*\b', query_lower)
+        
+        chemistry_score = sum(1 for term in chemistry_indicators if term in query_lower)
+        formula_score = len(chemical_formulas)
+        unit_score = len(lab_units)
+        ph_score = len(ph_values)
+        
+        # Calculate total score
+        total_score = chemistry_score + (formula_score * 2) + unit_score + ph_score
+        
+        # Accept if it has any chemistry indicators, or if it's a general question that could be chemistry-related
+        return total_score >= 1 or any(word in query_lower for word in ["what", "how", "explain", "tell", "create", "make", "generate"])
 
 
 # Example usage and testing

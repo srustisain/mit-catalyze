@@ -10,7 +10,7 @@ This directory contains all test files for the Catalyze project.
 - **`test_opentrons_extensive.py`** - Comprehensive test suite for Opentrons functionality with performance benchmarks
 
 ### MCP (Model Context Protocol) Tests
-- **`test_mcp_integration.py`** - Tests for MCP server integration
+- **`test_mcp_integration.py`** - Tests for MCP server integration (updated to use new PipelineManager)
 - **`test_mcp_tools.py`** - Tests for available MCP tools
 
 ### Agent System Tests
@@ -28,6 +28,10 @@ This directory contains all test files for the Catalyze project.
 
 ### Development/Utility Tests
 - **`test_pcr_fix.py`** - Test for PCR protocol generation fix
+- **`test_mcp_client.py`** - Test MCP client tool inspection and methods
+- **`test_opentrons_fix.py`** - Test Opentrons MCP tool calls fix
+- **`test_guardrails_simple.py`** - Simple test for guardrails functionality
+- **`test_improved_prompts.py`** - Test improved agent prompts and guardrails
 
 ## Test Results
 

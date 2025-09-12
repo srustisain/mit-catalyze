@@ -36,6 +36,12 @@ class BaseAgent(ABC):
     async def initialize(self):
         """Initialize the agent with MCP tools"""
         try:
+            if not MCP_SERVERS:
+                self.logger.warning(f"No MCP servers configured, initializing {self.name} without tools")
+                self.mcp_client = None
+                self.agent = None
+                return
+            
             self.mcp_client = MultiServerMCPClient(MCP_SERVERS)
             all_tools = await self.mcp_client.get_tools()
             
@@ -54,8 +60,10 @@ class BaseAgent(ABC):
             self.agent = create_react_agent(OPENAI_MODEL, available_tools)
             
         except Exception as e:
-            self.logger.error(f"Failed to initialize {self.name}: {e}")
-            raise
+            self.logger.warning(f"Failed to initialize {self.name} with MCP tools: {e}")
+            self.logger.info(f"Initializing {self.name} without tools as fallback")
+            self.mcp_client = None
+            self.agent = None
     
     @abstractmethod
     async def process_query(self, query: str, context: Dict[str, Any] = None) -> Dict[str, Any]:
@@ -86,6 +94,16 @@ Always provide accurate, detailed responses and cite your sources when possible.
         try:
             if not self.agent:
                 await self.initialize()
+            
+            # If agent is still None after initialization, return fallback response
+            if not self.agent:
+                self.logger.warning(f"Agent {self.name} not available, using fallback response")
+                return {
+                    "success": False,
+                    "error": "Agent not available (MCP tools failed to initialize)",
+                    "agent": self.name,
+                    "timestamp": datetime.now().isoformat()
+                }
             
             # Prepare the input for the agent
             agent_input = {

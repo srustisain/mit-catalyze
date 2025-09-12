@@ -63,6 +63,15 @@ class SmartRouter:
             classification = await self.intent_classifier.classify(query, context)
             self.logger.info(f"Classified as: {classification.intent.value} (confidence: {classification.confidence:.2f})")
             
+            # Step 1.5: Check if query was rejected by guardrails
+            if classification.intent == IntentType.UNKNOWN and classification.reasoning == "Query is not chemistry or lab-related":
+                return {
+                    "success": False,
+                    "response": "I specialize in chemistry and laboratory work. Please ask me about chemical compounds, lab protocols, automation, or safety procedures.",
+                    "classification": classification,
+                    "error": "Query rejected by content guardrails"
+                }
+            
             # Step 2: Route to appropriate agent
             if classification.confidence < 0.3:
                 return {
