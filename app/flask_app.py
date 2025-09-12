@@ -1,5 +1,6 @@
 import sys 
 import os
+import time
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from flask import Flask, request, jsonify, send_from_directory
@@ -8,16 +9,14 @@ from typing import Dict, List
 import json
 from datetime import datetime
 import asyncio
-import logging
-import os
 import tempfile
 from werkzeug.utils import secure_filename
 
 from src.api import ChatEndpoints
+from src.config.logging_config import get_logger
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger("catalyze.flask")
+# Get logger
+logger = get_logger("catalyze.flask")
 
 app = Flask(__name__, static_folder='../react-build', static_url_path='')
 CORS(app)
@@ -131,16 +130,21 @@ def get_status():
 @app.route('/api/upload-pdf', methods=['POST'])
 def upload_pdf():
     """Upload and process PDF files"""
+    temp_path = None
+    temp_dir = None
+    
     try:
+        # Check if file is present
         if 'pdf' not in request.files:
-            return jsonify({'error': 'No PDF file provided'}), 400
+            return jsonify({'success': False, 'error': 'No PDF file provided'}), 400
         
         file = request.files['pdf']
         if file.filename == '':
-            return jsonify({'error': 'No file selected'}), 400
+            return jsonify({'success': False, 'error': 'No file selected'}), 400
         
+        # Validate file extension
         if not file.filename.lower().endswith('.pdf'):
-            return jsonify({'error': 'File must be a PDF'}), 400
+            return jsonify({'success': False, 'error': 'File must be a PDF'}), 400
         
         # Check file size (limit to 10MB)
         file.seek(0, 2)  # Seek to end
@@ -148,15 +152,21 @@ def upload_pdf():
         file.seek(0)  # Reset to beginning
         
         if file_size > 10 * 1024 * 1024:  # 10MB limit
-            return jsonify({'error': 'File size must be less than 10MB'}), 400
+            return jsonify({'success': False, 'error': 'File size must be less than 10MB'}), 400
+        
+        if file_size == 0:
+            return jsonify({'success': False, 'error': 'File is empty'}), 400
         
         # Create temporary file
         filename = secure_filename(file.filename)
+        if not filename:
+            filename = f"upload_{int(time.time())}.pdf"
+        
         temp_dir = tempfile.mkdtemp()
         temp_path = os.path.join(temp_dir, filename)
         file.save(temp_path)
         
-        logger.info(f"PDF uploaded: {filename}")
+        logger.info(f"PDF uploaded: {filename} ({file_size} bytes)")
         
         # Process PDF with OpenAI
         loop = asyncio.new_event_loop()
@@ -167,9 +177,9 @@ def upload_pdf():
                 chat_endpoints.process_pdf(temp_path, filename)
             )
             
-            # Clean up temporary file
-            os.remove(temp_path)
-            os.rmdir(temp_dir)
+            # Ensure result has success field
+            if 'success' not in result:
+                result['success'] = True
             
             return jsonify(result)
         finally:
@@ -177,7 +187,21 @@ def upload_pdf():
             
     except Exception as e:
         logger.error(f"PDF upload error: {e}")
-        return jsonify({'error': f'Failed to process PDF: {str(e)}'}), 500
+        return jsonify({'success': False, 'error': f'Failed to process PDF: {str(e)}'}), 500
+    
+    finally:
+        # Clean up temporary files
+        if temp_path and os.path.exists(temp_path):
+            try:
+                os.remove(temp_path)
+            except Exception as e:
+                logger.warning(f"Failed to remove temp file {temp_path}: {e}")
+        
+        if temp_dir and os.path.exists(temp_dir):
+            try:
+                os.rmdir(temp_dir)
+            except Exception as e:
+                logger.warning(f"Failed to remove temp directory {temp_dir}: {e}")
 
 @app.route('/api/opentrons-status', methods=['GET'])
 def get_opentrons_status():

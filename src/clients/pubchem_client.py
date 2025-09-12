@@ -2,6 +2,7 @@ import requests
 import json
 import re
 from typing import Dict, List, Optional, Any
+from src.config.logging_config import get_logger
 import time
 
 class PubChemClient:
@@ -13,6 +14,7 @@ class PubChemClient:
         self.session.headers.update({
             'User-Agent': 'Catalyze-Chemistry-Assistant/1.0'
         })
+        self.logger = get_logger("catalyze.pubchem_client")
     
     def extract_chemicals(self, query: str) -> List[str]:
         """Extract chemical names from a query using simple pattern matching"""
@@ -85,7 +87,7 @@ class PubChemClient:
             return data
             
         except Exception as e:
-            print(f"Error getting data for {chemical_name}: {e}")
+            self.logger.error(f"Error getting data for {chemical_name}: {e}")
             return None
     
     def _get_cid(self, chemical_name: str) -> Optional[str]:
@@ -114,7 +116,7 @@ class PubChemClient:
             return None
             
         except Exception as e:
-            print(f"Error getting CID for {chemical_name}: {e}")
+            self.logger.error(f"Error getting CID for {chemical_name}: {e}")
             return None
     
     def _get_properties(self, cid: str) -> Optional[Dict[str, Any]]:
@@ -162,7 +164,7 @@ class PubChemClient:
             return properties if properties else None
             
         except Exception as e:
-            print(f"Error getting properties for CID {cid}: {e}")
+            self.logger.error(f"Error getting properties for CID {cid}: {e}")
             return None
     
     def _get_safety_info(self, cid: str) -> Dict[str, Any]:
@@ -198,7 +200,7 @@ class PubChemClient:
             return safety_data
             
         except Exception as e:
-            print(f"Error getting safety info for CID {cid}: {e}")
+            self.logger.error(f"Error getting safety info for CID {cid}: {e}")
             return {'hazards': [], 'summary': ''}
     
     def _get_basic_safety_info(self, cid: str) -> List[str]:
@@ -238,7 +240,7 @@ class PubChemClient:
             return []
             
         except Exception as e:
-            print(f"Error searching compounds: {e}")
+            self.logger.error(f"Error searching compounds: {e}")
             return []
     
     def get_chemical_data_by_cid(self, cid: str) -> Optional[Dict[str, Any]]:
@@ -265,7 +267,7 @@ class PubChemClient:
             return data
             
         except Exception as e:
-            print(f"Error getting data for CID {cid}: {e}")
+            self.logger.error(f"Error getting data for CID {cid}: {e}")
             return None
 
 

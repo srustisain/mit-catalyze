@@ -17,6 +17,7 @@ from langchain.output_parsers import PydanticOutputParser
 from pydantic import BaseModel, Field
 
 from src.clients.llm_client import LLMClient
+from src.config.logging_config import get_logger
 
 
 class IntentType(Enum):
@@ -40,7 +41,7 @@ class LangChainIntentClassifier:
     
     def __init__(self, llm_client: LLMClient = None):
         self.llm_client = llm_client or LLMClient()
-        self.logger = logging.getLogger("catalyze.langchain_classifier")
+        self.logger = get_logger("catalyze.langchain_classifier")
         
         # Initialize LangChain components
         self._setup_classifier()
@@ -278,15 +279,16 @@ async def test_langchain_classifier():
         "Create a protein extraction protocol"
     ]
     
-    print("🧪 Testing LangChain Intent Classifier...")
+    logger = get_logger("catalyze.test.langchain_classifier")
+    logger.info("🧪 Testing LangChain Intent Classifier...")
     for query in test_queries:
-        print(f"\nQuery: {query}")
+        logger.info(f"\nQuery: {query}")
         result = await classifier.classify(query)
-        print(f"Intent: {result.intent}")
-        print(f"Confidence: {result.confidence:.2f}")
-        print(f"Entities: {result.entities}")
-        print(f"Reasoning: {result.reasoning}")
-        print("-" * 50)
+        logger.info(f"Intent: {result.intent}")
+        logger.info(f"Confidence: {result.confidence:.2f}")
+        logger.info(f"Entities: {result.entities}")
+        logger.info(f"Reasoning: {result.reasoning}")
+        logger.info("-" * 50)
 
 
 if __name__ == "__main__":

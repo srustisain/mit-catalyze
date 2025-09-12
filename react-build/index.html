@@ -17,6 +17,7 @@
         .tab-content { display: none; }
         .tab-content.active { display: block; }
         
+        
         /* Enhanced UI Styles for Scientist-Friendly Interface */
         .glass-effect {
             background: rgba(255, 255, 255, 0.1);
@@ -48,6 +49,57 @@
         
         .dark .hover-lift:hover {
             box-shadow: 0 10px 25px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -2px rgba(0, 0, 0, 0.3);
+        }
+        
+        /* Code styling */
+        .chat-message pre {
+            background-color: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 0.375rem;
+            padding: 1rem;
+            margin: 0.5rem 0;
+            overflow-x: auto;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 0.875rem;
+            line-height: 1.5;
+            max-width: 100%;
+            word-wrap: break-word;
+            white-space: pre-wrap;
+        }
+        
+        .dark .chat-message pre {
+            background-color: #1e293b;
+            border-color: #334155;
+            color: #e2e8f0;
+        }
+        
+        .chat-message code {
+            background-color: #f1f5f9;
+            padding: 0.125rem 0.25rem;
+            border-radius: 0.25rem;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 0.875rem;
+        }
+        
+        .dark .chat-message code {
+            background-color: #334155;
+            color: #e2e8f0;
+        }
+        
+        /* Ensure chat messages don't overflow */
+        .chat-message {
+            max-width: 100%;
+            overflow-wrap: break-word;
+            word-wrap: break-word;
+        }
+        
+        /* Specific styling for code in chat messages */
+        .chat-message pre code {
+            background: none;
+            padding: 0;
+            border-radius: 0;
+            font-size: inherit;
+            color: inherit;
         }
         
         .scientist-gradient {
@@ -116,6 +168,175 @@
                 opacity: 1;
                 transform: translateY(0);
             }
+        }
+        
+        /* Enhanced Markdown Rendering Styles */
+        .chat-message h1, .chat-message h2, .chat-message h3, .chat-message h4, .chat-message h5, .chat-message h6 {
+            font-weight: 700;
+            margin: 1rem 0 0.5rem 0;
+            color: var(--text-primary);
+        }
+        
+        .chat-message h1 { font-size: 1.5rem; }
+        .chat-message h2 { font-size: 1.3rem; }
+        .chat-message h3 { font-size: 1.2rem; }
+        .chat-message h4 { font-size: 1.1rem; }
+        .chat-message h5 { font-size: 1rem; }
+        .chat-message h6 { font-size: 0.9rem; }
+        
+        .chat-message p {
+            margin: 0.5rem 0;
+            line-height: 1.6;
+        }
+        
+        .chat-message strong, .chat-message b {
+            font-weight: 700;
+            color: var(--primary);
+        }
+        
+        .chat-message em, .chat-message i {
+            font-style: italic;
+            color: var(--text-secondary);
+        }
+        
+        .chat-message code {
+            background: var(--bg-tertiary);
+            color: var(--error);
+            padding: 0.2rem 0.4rem;
+            border-radius: 0.25rem;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            border: 1px solid var(--border-color);
+        }
+        
+        .chat-message pre {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 0.5rem;
+            padding: 1rem;
+            margin: 1rem 0;
+            overflow-x: auto;
+            position: relative;
+        }
+        
+        .chat-message pre code {
+            background: none;
+            color: var(--text-primary);
+            padding: 0;
+            border: none;
+            font-size: 0.85rem;
+            line-height: 1.5;
+        }
+        
+        /* Syntax highlighting colors */
+        .chat-message .keyword {
+            color: #d73a49;
+            font-weight: 600;
+        }
+        
+        .chat-message .string {
+            color: #032f62;
+        }
+        
+        .chat-message .number {
+            color: #005cc5;
+        }
+        
+        .chat-message .comment {
+            color: #6a737d;
+            font-style: italic;
+        }
+        
+        /* Dark mode syntax highlighting */
+        .dark .chat-message .keyword {
+            color: #ff7b72;
+        }
+        
+        .dark .chat-message .string {
+            color: #a5d6ff;
+        }
+        
+        .dark .chat-message .number {
+            color: #79c0ff;
+        }
+        
+        .dark .chat-message .comment {
+            color: #8b949e;
+        }
+        
+        .chat-message pre::before {
+            content: attr(data-language);
+            position: absolute;
+            top: 0.5rem;
+            right: 1rem;
+            background: var(--primary);
+            color: white;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        
+        .chat-message ul, .chat-message ol {
+            margin: 0.5rem 0;
+            padding-left: 1.5rem;
+        }
+        
+        .chat-message li {
+            margin: 0.25rem 0;
+            line-height: 1.5;
+        }
+        
+        .chat-message blockquote {
+            border-left: 4px solid var(--primary);
+            background: var(--bg-tertiary);
+            margin: 1rem 0;
+            padding: 1rem;
+            border-radius: 0 0.5rem 0.5rem 0;
+            font-style: italic;
+        }
+        
+        .chat-message table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+            background: var(--bg-secondary);
+            border-radius: 0.5rem;
+            overflow: hidden;
+        }
+        
+        .chat-message th, .chat-message td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .chat-message th {
+            background: var(--primary);
+            color: white;
+            font-weight: 600;
+        }
+        
+        .chat-message tr:hover {
+            background: var(--bg-tertiary);
+        }
+        
+        .chat-message a {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 500;
+        }
+        
+        .chat-message a:hover {
+            text-decoration: underline;
+        }
+        
+        .chat-message hr {
+            border: none;
+            height: 2px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            margin: 1.5rem 0;
+            border-radius: 1px;
         }
         
         .mode-btn.active {
@@ -305,7 +526,7 @@
                         <div class="text-2xl mr-3">🤖</div>
                         <h3 class="text-lg font-semibold text-gray-900">Lab Automation</h3>
                     </div>
-                    <p class="text-sm text-gray-600">Generate Python scripts for Opentrons, PyHamilton, and other automation platforms</p>
+                    <p class="text-sm text-gray-600">Generate scripts for Opentrons and Dynamic Devices Lynx automation platforms</p>
                 </div>
                 
                 <!-- Data Analysis -->
@@ -314,7 +535,7 @@
                         <div class="text-2xl mr-3">📊</div>
                         <h3 class="text-lg font-semibold text-gray-900">Data Analysis</h3>
                     </div>
-                    <p class="text-sm text-gray-600">Visualize data with charts, graphs, and statistical analysis tools</p>
+                    <p class="text-sm text-gray-600">Visualize data with charts, and graphs</p>
                 </div>
                 
                 <!-- Export Data -->
@@ -323,7 +544,7 @@
                         <div class="text-2xl mr-3">📤</div>
                         <h3 class="text-lg font-semibold text-gray-900">Export Data</h3>
                     </div>
-                    <p class="text-sm text-gray-600">Export results, protocols, and data in multiple formats (PDF, CSV, JSON)</p>
+                    <p class="text-sm text-gray-600">Export results, protocols, and data</p>
                 </div>
             </div>
         </div>
@@ -373,49 +594,32 @@
                 </div>
             </div>
 
-            <!-- PDF Upload Area -->
-            <div id="pdfUploadArea" class="px-6 py-4 border-t border-gray-200 dark:border-gray-700" style="display: none;">
-                <div class="bg-blue-50 dark:bg-blue-900/20 border-2 border-dashed border-blue-300 dark:border-blue-600 rounded-lg p-6 text-center">
-                    <div class="text-4xl mb-2">📄</div>
-                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">Upload Scientific PDF</h3>
-                    <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">Drag and drop your PDF here or click to browse</p>
-                    <input type="file" id="pdfFileInput" accept=".pdf" class="hidden">
-                    <button onclick="document.getElementById('pdfFileInput').click()" class="scientist-gradient text-white px-6 py-2 rounded-lg font-medium hover:opacity-90 transition-all button-press">
-                        Choose PDF File
-                    </button>
-                    <div id="pdfUploadProgress" class="mt-4 hidden">
-                        <div class="bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                            <div id="pdfProgressBar" class="bg-blue-600 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
-                        </div>
-                        <p id="pdfUploadStatus" class="text-sm text-gray-600 dark:text-gray-400 mt-2">Uploading...</p>
-                    </div>
-                    <div id="pdfUploadSuccess" class="mt-4 hidden text-green-600 dark:text-green-400">
-                        ✅ PDF uploaded successfully! You can now ask questions about it.
-                    </div>
-                    <div id="pdfUploadError" class="mt-4 hidden text-red-600 dark:text-red-400">
-                        ❌ Upload failed. Please try again.
-                    </div>
-                </div>
-                <div class="flex justify-between items-center mt-4">
-                    <button onclick="togglePdfUpload()" class="text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 text-sm">
-                        ← Back to chat
-                    </button>
-                    <button onclick="clearPdfContext()" class="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-200 text-sm">
-                        Clear PDF context
-                    </button>
-                </div>
-            </div>
 
             <!-- Chat Input -->
             <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-700">
+                <!-- PDF Upload Status -->
+                <div id="pdfStatus" class="mb-3 hidden">
+                    <div id="pdfSuccess" class="hidden bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded flex items-center justify-between">
+                        <span>✅ PDF uploaded: <span id="pdfFileName"></span></span>
+                        <button onclick="clearPdfContext()" class="text-red-600 hover:text-red-800 text-sm ml-2">Clear</button>
+                        </div>
+                    <div id="pdfError" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+                        ❌ <span id="pdfErrorMessage"></span>
+                </div>
+            </div>
+
                 <div class="flex space-x-4">
                     <input type="text" id="chatInput" placeholder="Ask about chemistry, materials, or lab protocols..." 
                            class="input-focus flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400">
                     
                     <!-- Simple Chat Buttons -->
-                    <div class="flex space-x-4">
-                        <button onclick="togglePdfUpload()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-lg font-medium hover:opacity-90 transition-all button-press flex items-center space-x-2" title="Upload PDF">
-                            <span>📄</span>
+                    <div class="flex space-x-2">
+                        <input type="file" id="pdfUpload" accept=".pdf" class="hidden" onchange="uploadPDF(this.files[0])">
+                        <button onclick="document.getElementById('pdfUpload').click()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-lg font-medium transition-all" title="Upload PDF">
+                            📄
+                        </button>
+                        <button onclick="exportChatToPDF()" class="bg-red-500 hover:bg-red-600 text-white px-4 py-3 rounded-lg font-medium transition-all" title="Export Chat to PDF">
+                            📥
                         </button>
                         <button id="sendButton" class="scientist-gradient text-white px-6 py-3 rounded-lg font-medium hover:opacity-90 transition-all button-press flex items-center space-x-2">
                             <span>Send</span>
@@ -433,7 +637,6 @@
                 <nav class="flex space-x-8 px-6">
                     <button class="tab-btn py-4 px-1 border-b-4 border-white text-white font-medium transition-all button-press" data-tab="notes">📝 Notes</button>
                     <button class="tab-btn py-4 px-1 border-b-4 border-transparent text-white/80 hover:text-white font-medium transition-all button-press" data-tab="data-visualizer">📊 Data Visualizer</button>
-                    <button class="tab-btn py-4 px-1 border-b-4 border-transparent text-white/80 hover:text-white font-medium transition-all button-press" data-tab="export">📤 Export</button>
                 </nav>
             </div>
 
@@ -520,28 +723,6 @@
                 </div>
             </div>
 
-            <!-- Export Tab -->
-            <div id="export" class="tab-content p-6">
-                <h3 class="text-2xl font-semibold text-gray-900 dark:text-white mb-6">Export Options</h3>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div class="capability-card bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
-                        <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-3">Export Data</h4>
-                        <div class="space-y-2">
-                            <button onclick="exportToCSV()" class="w-full bg-green-500 hover:bg-green-600 text-white py-2 rounded-lg font-medium transition-all button-press">Export to CSV</button>
-                            <button onclick="exportToJSON()" class="w-full bg-blue-500 hover:bg-blue-600 text-white py-2 rounded-lg font-medium transition-all button-press">Export to JSON</button>
-                            <button onclick="exportToPDF()" class="w-full bg-red-500 hover:bg-red-600 text-white py-2 rounded-lg font-medium transition-all button-press">Export to PDF</button>
-                        </div>
-                    </div>
-                    <div class="capability-card bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
-                        <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-3">Export Reports</h4>
-                        <div class="space-y-2">
-                            <button onclick="exportProtocol()" class="w-full bg-purple-500 hover:bg-purple-600 text-white py-2 rounded-lg font-medium transition-all button-press">Export Protocol</button>
-                            <button onclick="exportNotes()" class="w-full bg-yellow-500 hover:bg-yellow-600 text-white py-2 rounded-lg font-medium transition-all button-press">Export Notes</button>
-                            <button onclick="exportAll()" class="w-full bg-gray-500 hover:bg-gray-600 text-white py-2 rounded-lg font-medium transition-all button-press">Export All</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
         </div>
     </div>
     <script>
@@ -832,7 +1013,7 @@
             function createNewChat() {
                 chatCounter++;
                 const chatId = `chat_${chatCounter}`;
-                const chatName = prompt('Enter a name for this chat:') || `New Chat ${chatCounter}`;
+                const chatName = `New Chat ${chatCounter}`;
                 
                 const newChat = {
                     id: chatId,
@@ -946,6 +1127,47 @@
                 }
             }
 
+            // Simple syntax highlighting
+            function highlightCode(code, language) {
+                if (!language || language === 'python') {
+                    return code
+                        .replace(/(def|class|if|else|elif|for|while|try|except|finally|with|import|from|as|return|yield|lambda|and|or|not|in|is|None|True|False)\b/g, '<span class="keyword">$1</span>')
+                        .replace(/(\d+\.?\d*)/g, '<span class="number">$1</span>')
+                        .replace(/(["'].*?["'])/g, '<span class="string">$1</span>')
+                        .replace(/(#.*$)/gm, '<span class="comment">$1</span>');
+                }
+                return code;
+            }
+
+            // Markdown rendering function
+            function renderMarkdown(text) {
+                // Simple markdown parser for common elements
+                let html = text
+                    // Headers
+                    .replace(/^### (.*$)/gim, '<h3>$1</h3>')
+                    .replace(/^## (.*$)/gim, '<h2>$1</h2>')
+                    .replace(/^# (.*$)/gim, '<h1>$1</h1>')
+                    // Code blocks with syntax highlighting (PROCESS FIRST to protect code from formatting)
+                    .replace(/```(\w+)?\n([\s\S]*?)```/g, (match, lang, code) => {
+                        const language = lang || 'text';
+                        const highlightedCode = highlightCode(code.trim(), language);
+                        return `<pre data-language="${language}"><code>${highlightedCode}</code></pre>`;
+                    })
+                    // Inline code (PROCESS SECOND to protect inline code from formatting)
+                    .replace(/`([^`]+)`/g, '<code>$1</code>')
+                    // Bold text
+                    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                    .replace(/__(.*?)__/g, '<strong>$1</strong>')
+                    // Italic text (PROCESS LAST so it doesn't affect code)
+                    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                    // DISABLED: Underscore italic conversion to preserve underscores in code
+                    // .replace(/_(.*?)_/g, '<em>$1</em>')
+                    // Line breaks
+                    .replace(/\n/g, '<br>');
+                
+                return html;
+            }
+
             // Chat functions
             function addMessage(content, isUser = false, isLoading = false) {
                 const messageDiv = document.createElement('div');
@@ -957,9 +1179,24 @@
                     messageDiv.id = messageId;
                 }
                 
+                // Render markdown for assistant messages, but preserve code blocks
+                let processedContent;
+                if (isUser) {
+                    processedContent = content;
+                } else {
+                    // Check if content is primarily code (starts with code block or contains mostly code)
+                    if (content.trim().startsWith('```') || content.includes('def run(protocol:') || content.includes('from opentrons import')) {
+                        // For code content, wrap in pre/code tags without markdown processing
+                        processedContent = `<pre><code>${content}</code></pre>`;
+                    } else {
+                        // For regular text, apply markdown processing
+                        processedContent = renderMarkdown(content);
+                    }
+                }
+                
                 messageDiv.innerHTML = `
                     <div class="bg-gray-100 dark:bg-gray-700 rounded-lg p-4 ${isUser ? 'bg-blue-100 dark:bg-blue-900' : ''} ${isLoading ? 'animate-pulse' : ''}">
-                        <p class="text-gray-900 dark:text-white whitespace-pre-line">${content}</p>
+                        <div class="text-gray-900 dark:text-white chat-message">${processedContent}</div>
                     </div>
                 `;
                 chatMessages.appendChild(messageDiv);
@@ -1036,6 +1273,7 @@
                         // Add PDF context if available
                         if (currentPdfContext) {
                             requestBody.pdf_context = currentPdfContext;
+                            console.log('Including PDF context in chat request:', currentPdfContext.filename);
                         }
                         
                         const response = await fetch('/api/chat', {
@@ -1405,124 +1643,287 @@
                 link.click();
             }
 
-            function exportAll() {
-                alert('Export all feature coming soon!');
-            }
-
-            // PDF Upload Functions
-            let currentPdfContext = null;
-            
-            function togglePdfUpload() {
-                const uploadArea = document.getElementById('pdfUploadArea');
-                const chatInput = document.getElementById('chatInput');
-                
-                if (uploadArea.style.display === 'none') {
-                    uploadArea.style.display = 'block';
-                    chatInput.placeholder = 'Upload a PDF first, then ask questions about it...';
-                } else {
-                    uploadArea.style.display = 'none';
-                    chatInput.placeholder = 'Ask about chemistry, materials, or lab protocols...';
+            // Chat Export Functions
+            function exportChatToCSV() {
+                try {
+                    const chatData = getCurrentChatData();
+                    if (!chatData || chatData.length === 0) {
+                        alert('No chat data to export!');
+                        return;
+                    }
+                    
+                    // Create CSV content
+                    const headers = ['Timestamp', 'Type', 'Content', 'Agent', 'Mode'];
+                    const csvContent = [
+                        headers.join(','),
+                        ...chatData.map(msg => [
+                            `"${msg.timestamp || ''}"`,
+                            `"${msg.type || ''}"`,
+                            `"${(msg.content || '').replace(/"/g, '""')}"`,
+                            `"${msg.agent || ''}"`,
+                            `"${msg.mode || ''}"`
+                        ].join(','))
+                    ].join('\n');
+                    
+                    // Download CSV
+                    downloadFile(csvContent, 'catalyze-chat-export.csv', 'text/csv');
+                    
+                } catch (error) {
+                    console.error('CSV export error:', error);
+                    alert('Error exporting CSV. Please try again.');
                 }
             }
             
-            function clearPdfContext() {
-                currentPdfContext = null;
-                document.getElementById('pdfFileInput').value = '';
-                document.getElementById('pdfUploadSuccess').classList.add('hidden');
-                document.getElementById('pdfUploadError').classList.add('hidden');
-                document.getElementById('pdfUploadProgress').classList.add('hidden');
-                document.getElementById('chatInput').placeholder = 'Ask about chemistry, materials, or lab protocols...';
-                console.log('PDF context cleared');
+            function exportChatToPDF() {
+                try {
+                    const chatData = getCurrentChatData();
+                    console.log('Chat data extracted:', chatData);
+                    
+                    if (!chatData || chatData.length === 0) {
+                        alert('No chat data to export! Please start a conversation first.');
+                        return;
+                    }
+                    
+                    // Create a temporary container for PDF content
+                    const pdfContainer = document.createElement('div');
+                    pdfContainer.style.cssText = `
+                        position: fixed;
+                        top: -9999px;
+                        left: -9999px;
+                        width: 800px;
+                        background: white;
+                        color: black;
+                        font-family: Arial, sans-serif;
+                        padding: 20px;
+                        line-height: 1.6;
+                    `;
+                    
+                    // Build PDF content
+                    let pdfContent = `
+                        <div style="text-align: center; margin-bottom: 30px; border-bottom: 2px solid #333; padding-bottom: 20px;">
+                            <h1 style="color: #4F46E5; margin: 0;">Catalyze Chat Export</h1>
+                            <p style="margin: 10px 0 0 0; color: #666;">Generated on ${new Date().toLocaleString()}</p>
+                        </div>
+                    `;
+                    
+                    chatData.forEach((msg, index) => {
+                        console.log(`Processing message ${index}:`, msg);
+                        const bgColor = msg.type === 'user' ? '#f3f4f6' : '#ffffff';
+                        const borderColor = msg.type === 'user' ? '#d1d5db' : '#e5e7eb';
+                        
+                        // Clean up the content - remove HTML tags and get plain text
+                        let cleanContent = msg.content || '';
+                        if (typeof cleanContent === 'string') {
+                            // Remove HTML tags but preserve line breaks
+                            cleanContent = cleanContent.replace(/<[^>]*>/g, '').trim();
+                            // Replace HTML entities
+                            cleanContent = cleanContent.replace(/&nbsp;/g, ' ').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
+                        }
+                        console.log(`Cleaned content:`, cleanContent);
+                        
+                        pdfContent += `
+                            <div style="margin-bottom: 20px; border: 1px solid ${borderColor}; border-radius: 8px; background: ${bgColor}; padding: 15px;">
+                                <div style="display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 12px; color: #666;">
+                                    <span><strong>${msg.type === 'user' ? 'You' : 'Catalyze'}</strong></span>
+                                    <span>${msg.timestamp || ''}</span>
+                                </div>
+                                <div style="white-space: pre-wrap; font-size: 14px; color: #333;">${cleanContent}</div>
+                                ${msg.agent ? `<div style="margin-top: 8px; font-size: 11px; color: #888;">via ${msg.agent} agent</div>` : ''}
+                            </div>
+                        `;
+                    });
+                    
+                    pdfContainer.innerHTML = pdfContent;
+                    document.body.appendChild(pdfContainer);
+                    
+                    // Show the PDF container and hide everything else
+                    const originalBodyStyle = document.body.style.cssText;
+                    const allElements = Array.from(document.body.children);
+                    
+                    // Hide all elements except our PDF container
+                    allElements.forEach(el => {
+                        if (el !== pdfContainer) {
+                            el.style.display = 'none';
+                        }
+                    });
+                    
+                    // Make PDF container visible and properly styled
+                    pdfContainer.style.cssText = `
+                        position: static !important;
+                        top: auto !important;
+                        left: auto !important;
+                        width: 100% !important;
+                        background: white !important;
+                        color: black !important;
+                        font-family: Arial, sans-serif !important;
+                        padding: 20px !important;
+                        line-height: 1.6 !important;
+                        margin: 0 !important;
+                        min-height: 100vh !important;
+                        box-sizing: border-box !important;
+                    `;
+                    
+                    // Use browser's print functionality
+                    window.print();
+                    
+                    // Restore original state
+                    allElements.forEach(el => {
+                        if (el !== pdfContainer) {
+                            el.style.display = '';
+                        }
+                    });
+                    
+                    document.body.style.cssText = originalBodyStyle;
+                    document.body.removeChild(pdfContainer);
+                    
+                } catch (error) {
+                    console.error('PDF export error:', error);
+                    alert('Error exporting PDF. Please try again.');
+                }
             }
             
-            async function uploadPdf(file) {
-                const formData = new FormData();
-                formData.append('pdf', file);
+            function getCurrentChatData() {
+                const chatMessages = document.getElementById('chatMessages');
+                if (!chatMessages) {
+                    console.log('No chatMessages element found');
+                    return [];
+                }
                 
-                // Show progress
-                const progressDiv = document.getElementById('pdfUploadProgress');
-                const progressBar = document.getElementById('pdfProgressBar');
-                const statusText = document.getElementById('pdfUploadStatus');
+                // Get all message divs (they don't have a specific class, just are direct children)
+                const messageDivs = Array.from(chatMessages.children);
+                console.log('Found message divs:', messageDivs.length);
+                const chatData = [];
                 
-                progressDiv.classList.remove('hidden');
-                document.getElementById('pdfUploadSuccess').classList.add('hidden');
-                document.getElementById('pdfUploadError').classList.add('hidden');
+                messageDivs.forEach(msgElement => {
+                    // Skip loading messages
+                    if (msgElement.id && msgElement.id.startsWith('loading-')) {
+                        return;
+                    }
+                    
+                    // Check if it's a user message (has ml-auto class)
+                    const isUser = msgElement.classList.contains('ml-auto');
+                    
+                    // Get the message content from the nested div
+                    const contentElement = msgElement.querySelector('.chat-message');
+                    
+                    if (contentElement) {
+                        chatData.push({
+                            timestamp: new Date().toLocaleString(),
+                            type: isUser ? 'user' : 'assistant',
+                            content: contentElement.textContent || contentElement.innerHTML,
+                            agent: extractAgentFromMessage(contentElement),
+                            mode: currentTabMode || 'research'
+                        });
+                    }
+                });
+                
+                return chatData;
+            }
+            
+            function extractAgentFromMessage(contentElement) {
+                const text = contentElement.textContent || '';
+                const agentMatch = text.match(/\(via (\w+) agent\)/);
+                return agentMatch ? agentMatch[1] : '';
+            }
+            
+            function downloadFile(content, filename, mimeType) {
+                const blob = new Blob([content], { type: mimeType });
+                const url = window.URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = filename;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                window.URL.revokeObjectURL(url);
+            }
+            
+            function exportAll() {
+                try {
+                    exportChatToCSV();
+                    setTimeout(() => exportChatToPDF(), 1000);
+                } catch (error) {
+                    console.error('Export all error:', error);
+                    alert('Error exporting data. Please try individual exports.');
+                }
+            }
+            
+            // Function to reinitialize event listeners after PDF export
+            function initializeEventListeners() {
+                // Re-add event listeners that might have been lost
+                const sendButtons = document.querySelectorAll('[onclick="sendMessage()"]');
+                sendButtons.forEach(btn => {
+                    btn.addEventListener('click', sendMessage);
+                });
+                
+                const chatInput = document.getElementById('chatInput');
+                if (chatInput) {
+                    chatInput.addEventListener('keypress', function(e) {
+                        if (e.key === 'Enter') {
+                            sendMessage();
+                        }
+                    });
+                }
+                
+                // Re-add other essential event listeners
+                const tabButtons = document.querySelectorAll('[data-tab]');
+                tabButtons.forEach(button => {
+                    button.addEventListener('click', () => {
+                        const tabId = button.getAttribute('data-tab');
+                        switchToTab(tabId);
+                    });
+                });
+            }
+
+            // Simple PDF Upload Function
+            let currentPdfContext = null;
+            
+            async function uploadPDF(file) {
+                if (!file) return;
+                
+                // Hide any previous messages
+                document.getElementById('pdfStatus').classList.add('hidden');
+                document.getElementById('pdfSuccess').classList.add('hidden');
+                document.getElementById('pdfError').classList.add('hidden');
+                
+                // Show uploading status
+                document.getElementById('pdfStatus').classList.remove('hidden');
+                document.getElementById('pdfError').classList.remove('hidden');
+                document.getElementById('pdfErrorMessage').textContent = 'Uploading...';
                 
                 try {
-                    // Simulate progress
-                    let progress = 0;
-                    const progressInterval = setInterval(() => {
-                        progress += Math.random() * 30;
-                        if (progress > 90) progress = 90;
-                        progressBar.style.width = progress + '%';
-                        statusText.textContent = progress < 50 ? 'Uploading PDF...' : 'Processing PDF...';
-                    }, 200);
+                    const formData = new FormData();
+                    formData.append('pdf', file);
                     
                     const response = await fetch('/api/upload-pdf', {
                         method: 'POST',
                         body: formData
                     });
                     
-                    clearInterval(progressInterval);
-                    progressBar.style.width = '100%';
-                    statusText.textContent = 'Complete!';
-                    
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-                    
                     const data = await response.json();
-                    currentPdfContext = data;
                     
-                    // Show success
-                    setTimeout(() => {
-                        progressDiv.classList.add('hidden');
-                        document.getElementById('pdfUploadSuccess').classList.remove('hidden');
+                    if (data.success) {
+                        // Store PDF context for chat integration
+                        currentPdfContext = {
+                            filename: data.filename,
+                            content: data.content,
+                            file_size: data.file_size,
+                            timestamp: data.timestamp
+                        };
+                        
+                        document.getElementById('pdfError').classList.add('hidden');
+                        document.getElementById('pdfSuccess').classList.remove('hidden');
+                        document.getElementById('pdfFileName').textContent = data.filename;
                         document.getElementById('chatInput').placeholder = `Ask questions about "${data.filename}"...`;
-                    }, 500);
-                    
-                    console.log('PDF uploaded successfully:', data);
-                    
+                        
+                        console.log('PDF context stored:', currentPdfContext);
+                        } else {
+                        throw new Error(data.error || 'Upload failed');
+                    }
                 } catch (error) {
-                    clearInterval(progressInterval);
-                    progressDiv.classList.add('hidden');
-                    document.getElementById('pdfUploadError').classList.remove('hidden');
-                    console.error('PDF upload failed:', error);
+                    document.getElementById('pdfError').classList.remove('hidden');
+                    document.getElementById('pdfErrorMessage').textContent = error.message || 'Upload failed';
                 }
-            }
-            
-            // Drag and drop functionality
-            function setupDragAndDrop() {
-                const uploadArea = document.getElementById('pdfUploadArea');
-                const fileInput = document.getElementById('pdfFileInput');
-                
-                uploadArea.addEventListener('dragover', (e) => {
-                    e.preventDefault();
-                    uploadArea.classList.add('bg-blue-100', 'dark:bg-blue-800/30');
-                });
-                
-                uploadArea.addEventListener('dragleave', (e) => {
-                    e.preventDefault();
-                    uploadArea.classList.remove('bg-blue-100', 'dark:bg-blue-800/30');
-                });
-                
-                uploadArea.addEventListener('drop', (e) => {
-                    e.preventDefault();
-                    uploadArea.classList.remove('bg-blue-100', 'dark:bg-blue-800/30');
-                    
-                    const files = e.dataTransfer.files;
-                    if (files.length > 0 && files[0].type === 'application/pdf') {
-                        uploadPdf(files[0]);
-                    } else {
-                        alert('Please upload a PDF file.');
-                    }
-                });
-                
-                fileInput.addEventListener('change', (e) => {
-                    if (e.target.files.length > 0) {
-                        uploadPdf(e.target.files[0]);
-                    }
-                });
             }
 
             // Make functions globally accessible
@@ -1537,14 +1938,22 @@
             window.clearChart = clearChart;
             window.downloadChart = downloadChart;
             window.exportToCSV = exportToCSV;
+            window.exportChatToCSV = exportChatToCSV;
             window.exportToJSON = exportToJSON;
             window.exportToPDF = exportToPDF;
+            window.exportChatToPDF = exportChatToPDF;
             window.exportProtocol = exportProtocol;
             window.exportNotes = exportNotes;
             window.exportAll = exportAll;
             window.deleteChat = deleteChat;
-            window.togglePdfUpload = togglePdfUpload;
-            window.clearPdfContext = clearPdfContext;
+            window.uploadPDF = uploadPDF;
+            window.clearPdfContext = function() {
+                currentPdfContext = null;
+                document.getElementById('pdfUpload').value = '';
+                document.getElementById('pdfStatus').classList.add('hidden');
+                document.getElementById('chatInput').placeholder = 'Ask about chemistry, materials, or lab protocols...';
+                console.log('PDF context cleared');
+            };
 
             // Event listeners
             sendButton.addEventListener('click', sendMessage);
@@ -1555,11 +1964,11 @@
             });
             newChatBtn.addEventListener('click', createNewChat);
 
+
             // Initialize app
             loadNotes();
             loadChatHistory();
             updateStats();
-            setupDragAndDrop();
             
             console.log('✅ App initialization complete!');
         });

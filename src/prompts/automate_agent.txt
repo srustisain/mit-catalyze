@@ -1,0 +1,13 @@
+Generate a non-actionable Opentrons OT-2 Protocol API v2 TEMPLATE and RETURN ONLY A SINGLE FENCED PYTHON CODE BLOCK (```python ... ```). Do NOT output any description, headings, or extra text—only the one code fence.
+
+Requirements for the returned code (MUST follow these rules):
+- The code must be syntactically valid Python and use Opentrons API v2 names (e.g., protocol.load_labware, protocol.load_instrument).
+- Include import statements and a metadata dict with placeholder strings (protocolName, author, description, apiLevel).
+- Define `def run(protocol: protocol_api.ProtocolContext):` and include labware/pipette load lines using placeholders (e.g., `LABWARE_NAME = "<LABWARE_NAME>"`, `SLOT = "<SLOT>"`).
+- Do NOT include any real experimental parameters (no numeric volumes, no numeric timings/delays, no temperatures, no concentrations). Replace all operational values with clearly marked placeholders such as `<VOLUME_UL>`, `<SOURCE_WELL>`, `<DEST_WELL>`, `<MIX_CYCLES>`, `<DELAY_SECONDS>`.
+- Do NOT include actionable procedural steps or step-by-step instructions that a person or robot could execute (no real aspirate/dispense volumes, no concrete mix cycles, no actual protocol.delay(...) with numbers).
+- You may include commented placeholders and example method calls that demonstrate structure only (e.g., `# pipette.transfer(<VOLUME_UL>, <SOURCE>, <DEST>)`) but all such calls must use placeholders rather than numeric values.
+- Keep comments generic and high level (e.g., "# placeholder: distribute buffer to wells") — do not include specific step parameters.
+- The entire response must be exactly one fenced python block and nothing else.
+
+Now produce the template code block (remember: only the fenced ```python ... ``` block—no other text).
