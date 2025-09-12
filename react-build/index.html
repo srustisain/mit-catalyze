@@ -118,6 +118,175 @@
             }
         }
         
+        /* Enhanced Markdown Rendering Styles */
+        .chat-message h1, .chat-message h2, .chat-message h3, .chat-message h4, .chat-message h5, .chat-message h6 {
+            font-weight: 700;
+            margin: 1rem 0 0.5rem 0;
+            color: var(--text-primary);
+        }
+        
+        .chat-message h1 { font-size: 1.5rem; }
+        .chat-message h2 { font-size: 1.3rem; }
+        .chat-message h3 { font-size: 1.2rem; }
+        .chat-message h4 { font-size: 1.1rem; }
+        .chat-message h5 { font-size: 1rem; }
+        .chat-message h6 { font-size: 0.9rem; }
+        
+        .chat-message p {
+            margin: 0.5rem 0;
+            line-height: 1.6;
+        }
+        
+        .chat-message strong, .chat-message b {
+            font-weight: 700;
+            color: var(--primary);
+        }
+        
+        .chat-message em, .chat-message i {
+            font-style: italic;
+            color: var(--text-secondary);
+        }
+        
+        .chat-message code {
+            background: var(--bg-tertiary);
+            color: var(--error);
+            padding: 0.2rem 0.4rem;
+            border-radius: 0.25rem;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            border: 1px solid var(--border-color);
+        }
+        
+        .chat-message pre {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 0.5rem;
+            padding: 1rem;
+            margin: 1rem 0;
+            overflow-x: auto;
+            position: relative;
+        }
+        
+        .chat-message pre code {
+            background: none;
+            color: var(--text-primary);
+            padding: 0;
+            border: none;
+            font-size: 0.85rem;
+            line-height: 1.5;
+        }
+        
+        /* Syntax highlighting colors */
+        .chat-message .keyword {
+            color: #d73a49;
+            font-weight: 600;
+        }
+        
+        .chat-message .string {
+            color: #032f62;
+        }
+        
+        .chat-message .number {
+            color: #005cc5;
+        }
+        
+        .chat-message .comment {
+            color: #6a737d;
+            font-style: italic;
+        }
+        
+        /* Dark mode syntax highlighting */
+        .dark .chat-message .keyword {
+            color: #ff7b72;
+        }
+        
+        .dark .chat-message .string {
+            color: #a5d6ff;
+        }
+        
+        .dark .chat-message .number {
+            color: #79c0ff;
+        }
+        
+        .dark .chat-message .comment {
+            color: #8b949e;
+        }
+        
+        .chat-message pre::before {
+            content: attr(data-language);
+            position: absolute;
+            top: 0.5rem;
+            right: 1rem;
+            background: var(--primary);
+            color: white;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        
+        .chat-message ul, .chat-message ol {
+            margin: 0.5rem 0;
+            padding-left: 1.5rem;
+        }
+        
+        .chat-message li {
+            margin: 0.25rem 0;
+            line-height: 1.5;
+        }
+        
+        .chat-message blockquote {
+            border-left: 4px solid var(--primary);
+            background: var(--bg-tertiary);
+            margin: 1rem 0;
+            padding: 1rem;
+            border-radius: 0 0.5rem 0.5rem 0;
+            font-style: italic;
+        }
+        
+        .chat-message table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+            background: var(--bg-secondary);
+            border-radius: 0.5rem;
+            overflow: hidden;
+        }
+        
+        .chat-message th, .chat-message td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .chat-message th {
+            background: var(--primary);
+            color: white;
+            font-weight: 600;
+        }
+        
+        .chat-message tr:hover {
+            background: var(--bg-tertiary);
+        }
+        
+        .chat-message a {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 500;
+        }
+        
+        .chat-message a:hover {
+            text-decoration: underline;
+        }
+        
+        .chat-message hr {
+            border: none;
+            height: 2px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            margin: 1.5rem 0;
+            border-radius: 1px;
+        }
+        
         .mode-btn.active {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
             color: white;
@@ -375,7 +544,7 @@
 
             <!-- PDF Upload Area -->
             <div id="pdfUploadArea" class="px-6 py-4 border-t border-gray-200 dark:border-gray-700" style="display: none;">
-                <div class="bg-blue-50 dark:bg-blue-900/20 border-2 border-dashed border-blue-300 dark:border-blue-600 rounded-lg p-6 text-center">
+                <div class="bg-blue-50 dark:bg-blue-900/20 border-2 border-dashed border-blue-300 dark:border-blue-600 rounded-lg p-6 text-center hover:bg-blue-100 dark:hover:bg-blue-800/30 transition-colors" id="pdfDropZone">
                     <div class="text-4xl mb-2">📄</div>
                     <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">Upload Scientific PDF</h3>
                     <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">Drag and drop your PDF here or click to browse</p>
@@ -390,18 +559,27 @@
                         <p id="pdfUploadStatus" class="text-sm text-gray-600 dark:text-gray-400 mt-2">Uploading...</p>
                     </div>
                     <div id="pdfUploadSuccess" class="mt-4 hidden text-green-600 dark:text-green-400">
-                        ✅ PDF uploaded successfully! You can now ask questions about it.
+                        <div class="flex items-center justify-center space-x-2">
+                            <span>✅</span>
+                            <span>PDF uploaded successfully! You can now ask questions about it.</span>
+                        </div>
+                        <div id="pdfFileInfo" class="mt-2 text-sm text-gray-500 dark:text-gray-400"></div>
                     </div>
                     <div id="pdfUploadError" class="mt-4 hidden text-red-600 dark:text-red-400">
-                        ❌ Upload failed. Please try again.
+                        <div class="flex items-center justify-center space-x-2">
+                            <span>❌</span>
+                            <span id="pdfErrorText">Upload failed. Please try again.</span>
+                        </div>
                     </div>
                 </div>
                 <div class="flex justify-between items-center mt-4">
-                    <button onclick="togglePdfUpload()" class="text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 text-sm">
-                        ← Back to chat
+                    <button onclick="togglePdfUpload()" class="text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 text-sm flex items-center space-x-1">
+                        <span>←</span>
+                        <span>Back to chat</span>
                     </button>
-                    <button onclick="clearPdfContext()" class="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-200 text-sm">
-                        Clear PDF context
+                    <button onclick="clearPdfContext()" class="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-200 text-sm flex items-center space-x-1">
+                        <span>🗑️</span>
+                        <span>Clear PDF context</span>
                     </button>
                 </div>
             </div>
@@ -946,6 +1124,46 @@
                 }
             }
 
+            // Simple syntax highlighting
+            function highlightCode(code, language) {
+                if (!language || language === 'python') {
+                    return code
+                        .replace(/(def|class|if|else|elif|for|while|try|except|finally|with|import|from|as|return|yield|lambda|and|or|not|in|is|None|True|False)\b/g, '<span class="keyword">$1</span>')
+                        .replace(/(\d+\.?\d*)/g, '<span class="number">$1</span>')
+                        .replace(/(["'].*?["'])/g, '<span class="string">$1</span>')
+                        .replace(/(#.*$)/gm, '<span class="comment">$1</span>');
+                }
+                return code;
+            }
+
+            // Markdown rendering function
+            function renderMarkdown(text) {
+                // Simple markdown parser for common elements
+                let html = text
+                    // Headers
+                    .replace(/^### (.*$)/gim, '<h3>$1</h3>')
+                    .replace(/^## (.*$)/gim, '<h2>$1</h2>')
+                    .replace(/^# (.*$)/gim, '<h1>$1</h1>')
+                    // Bold text
+                    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                    .replace(/__(.*?)__/g, '<strong>$1</strong>')
+                    // Italic text
+                    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                    .replace(/_(.*?)_/g, '<em>$1</em>')
+                    // Inline code
+                    .replace(/`([^`]+)`/g, '<code>$1</code>')
+                    // Code blocks with syntax highlighting
+                    .replace(/```(\w+)?\n([\s\S]*?)```/g, (match, lang, code) => {
+                        const language = lang || 'text';
+                        const highlightedCode = highlightCode(code.trim(), language);
+                        return `<pre data-language="${language}"><code>${highlightedCode}</code></pre>`;
+                    })
+                    // Line breaks
+                    .replace(/\n/g, '<br>');
+                
+                return html;
+            }
+
             // Chat functions
             function addMessage(content, isUser = false, isLoading = false) {
                 const messageDiv = document.createElement('div');
@@ -957,9 +1175,12 @@
                     messageDiv.id = messageId;
                 }
                 
+                // Render markdown for assistant messages
+                const processedContent = isUser ? content : renderMarkdown(content);
+                
                 messageDiv.innerHTML = `
                     <div class="bg-gray-100 dark:bg-gray-700 rounded-lg p-4 ${isUser ? 'bg-blue-100 dark:bg-blue-900' : ''} ${isLoading ? 'animate-pulse' : ''}">
-                        <p class="text-gray-900 dark:text-white whitespace-pre-line">${content}</p>
+                        <div class="text-gray-900 dark:text-white chat-message">${processedContent}</div>
                     </div>
                 `;
                 chatMessages.appendChild(messageDiv);
@@ -1435,7 +1656,44 @@
                 console.log('PDF context cleared');
             }
             
+            function resetUploadUI() {
+                document.getElementById('pdfUploadSuccess').classList.add('hidden');
+                document.getElementById('pdfUploadError').classList.add('hidden');
+                document.getElementById('pdfUploadProgress').classList.add('hidden');
+                document.getElementById('pdfFileInfo').textContent = '';
+                document.getElementById('pdfErrorText').textContent = 'Upload failed. Please try again.';
+            }
+            
+            function showUploadError(message) {
+                document.getElementById('pdfUploadProgress').classList.add('hidden');
+                document.getElementById('pdfUploadError').classList.remove('hidden');
+                document.getElementById('pdfErrorText').textContent = message;
+            }
+            
+            function showUploadSuccess(data) {
+                document.getElementById('pdfUploadProgress').classList.add('hidden');
+                document.getElementById('pdfUploadSuccess').classList.remove('hidden');
+                document.getElementById('pdfFileInfo').textContent = `File: ${data.filename} (${(data.file_size / 1024).toFixed(1)} KB)`;
+                document.getElementById('chatInput').placeholder = `Ask questions about "${data.filename}"...`;
+            }
+            
             async function uploadPdf(file) {
+                // Validate file
+                if (!file) {
+                    showUploadError('No file selected');
+                    return;
+                }
+                
+                if (file.type !== 'application/pdf') {
+                    showUploadError('Please select a PDF file');
+                    return;
+                }
+                
+                if (file.size > 10 * 1024 * 1024) { // 10MB limit
+                    showUploadError('File size must be less than 10MB');
+                    return;
+                }
+                
                 const formData = new FormData();
                 formData.append('pdf', file);
                 
@@ -1444,19 +1702,18 @@
                 const progressBar = document.getElementById('pdfProgressBar');
                 const statusText = document.getElementById('pdfUploadStatus');
                 
+                resetUploadUI();
                 progressDiv.classList.remove('hidden');
-                document.getElementById('pdfUploadSuccess').classList.add('hidden');
-                document.getElementById('pdfUploadError').classList.add('hidden');
                 
                 try {
                     // Simulate progress
                     let progress = 0;
                     const progressInterval = setInterval(() => {
-                        progress += Math.random() * 30;
-                        if (progress > 90) progress = 90;
+                        progress += Math.random() * 20;
+                        if (progress > 85) progress = 85;
                         progressBar.style.width = progress + '%';
-                        statusText.textContent = progress < 50 ? 'Uploading PDF...' : 'Processing PDF...';
-                    }, 200);
+                        statusText.textContent = progress < 40 ? 'Uploading PDF...' : 'Processing PDF...';
+                    }, 300);
                     
                     const response = await fetch('/api/upload-pdf', {
                         method: 'POST',
@@ -1468,56 +1725,83 @@
                     statusText.textContent = 'Complete!';
                     
                     if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
+                        const errorData = await response.json().catch(() => ({}));
+                        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
                     }
                     
                     const data = await response.json();
+                    
+                    if (!data.success) {
+                        throw new Error(data.error || 'Upload failed');
+                    }
+                    
                     currentPdfContext = data;
                     
                     // Show success
                     setTimeout(() => {
-                        progressDiv.classList.add('hidden');
-                        document.getElementById('pdfUploadSuccess').classList.remove('hidden');
-                        document.getElementById('chatInput').placeholder = `Ask questions about "${data.filename}"...`;
+                        showUploadSuccess(data);
                     }, 500);
                     
                     console.log('PDF uploaded successfully:', data);
                     
                 } catch (error) {
                     clearInterval(progressInterval);
-                    progressDiv.classList.add('hidden');
-                    document.getElementById('pdfUploadError').classList.remove('hidden');
                     console.error('PDF upload failed:', error);
+                    showUploadError(error.message || 'Upload failed. Please try again.');
                 }
             }
             
             // Drag and drop functionality
             function setupDragAndDrop() {
-                const uploadArea = document.getElementById('pdfUploadArea');
+                const dropZone = document.getElementById('pdfDropZone');
                 const fileInput = document.getElementById('pdfFileInput');
                 
-                uploadArea.addEventListener('dragover', (e) => {
-                    e.preventDefault();
-                    uploadArea.classList.add('bg-blue-100', 'dark:bg-blue-800/30');
+                // Prevent default drag behaviors
+                ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                    dropZone.addEventListener(eventName, preventDefaults, false);
+                    document.body.addEventListener(eventName, preventDefaults, false);
                 });
                 
-                uploadArea.addEventListener('dragleave', (e) => {
+                function preventDefaults(e) {
                     e.preventDefault();
-                    uploadArea.classList.remove('bg-blue-100', 'dark:bg-blue-800/30');
+                    e.stopPropagation();
+                }
+                
+                // Highlight drop zone when item is dragged over it
+                ['dragenter', 'dragover'].forEach(eventName => {
+                    dropZone.addEventListener(eventName, highlight, false);
                 });
                 
-                uploadArea.addEventListener('drop', (e) => {
-                    e.preventDefault();
-                    uploadArea.classList.remove('bg-blue-100', 'dark:bg-blue-800/30');
+                ['dragleave', 'drop'].forEach(eventName => {
+                    dropZone.addEventListener(eventName, unhighlight, false);
+                });
+                
+                function highlight(e) {
+                    dropZone.classList.add('bg-blue-100', 'dark:bg-blue-800/30');
+                }
+                
+                function unhighlight(e) {
+                    dropZone.classList.remove('bg-blue-100', 'dark:bg-blue-800/30');
+                }
+                
+                // Handle dropped files
+                dropZone.addEventListener('drop', handleDrop, false);
+                
+                function handleDrop(e) {
+                    const dt = e.dataTransfer;
+                    const files = dt.files;
                     
-                    const files = e.dataTransfer.files;
-                    if (files.length > 0 && files[0].type === 'application/pdf') {
-                        uploadPdf(files[0]);
-                    } else {
-                        alert('Please upload a PDF file.');
+                    if (files.length > 0) {
+                        const file = files[0];
+                        if (file.type === 'application/pdf') {
+                            uploadPdf(file);
+                        } else {
+                            showUploadError('Please upload a PDF file');
+                        }
                     }
-                });
+                }
                 
+                // Handle file input change
                 fileInput.addEventListener('change', (e) => {
                     if (e.target.files.length > 0) {
                         uploadPdf(e.target.files[0]);
