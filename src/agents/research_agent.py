@@ -75,7 +75,11 @@ class ResearchAgent(BaseAgent):
                         if hasattr(message, 'content') and message.content:
                             content = message.content
                             # Only add actual database results, not system prompts
-                            if any(keyword in content.lower() for keyword in ["chembl", "molecular weight", "formula", "structure"]) and "system" not in content.lower():
+                            if (any(keyword in content.lower() for keyword in ["chembl", "molecular weight", "formula", "structure"]) and 
+                                "system" not in content.lower() and 
+                                "your capabilities include" not in content.lower() and
+                                "when answering questions" not in content.lower() and
+                                len(content) > 50):  # Avoid short generic responses
                                 enhancement_parts.append(f"ChEMBL Database: {content}")
                     
                     if enhancement_parts:
@@ -83,6 +87,7 @@ class ResearchAgent(BaseAgent):
                         self.logger.info(f"Added ChEMBL enhancement: {len(chembl_enhancement)} characters")
                     else:
                         self.logger.info("No ChEMBL data extracted")
+                        chembl_enhancement = ""  # Don't add generic text
                 
             except Exception as e:
                 self.logger.error(f"ChEMBL enhancement failed: {e}")
@@ -90,6 +95,9 @@ class ResearchAgent(BaseAgent):
         
         # Combine responses
         final_response = openai_response + chembl_enhancement
+        
+        # Clean up any remaining generic text
+        final_response = self._clean_response(final_response)
         
         return {
             "success": True,
@@ -99,6 +107,30 @@ class ResearchAgent(BaseAgent):
             "timestamp": self._get_timestamp()
         }
     
+    def _clean_response(self, response: str) -> str:
+        """Clean up generic text from responses"""
+        # Remove generic capability descriptions
+        generic_patterns = [
+            "\n\nAdditional Database Information:\n\n\n\nYour capabilities include:\n\n- Answering chemistry questions with detailed explanations\n\n- Providing chemical properties, structures, and formulas\n\n- Explaining chemical reactions and mechanisms\n\n- Accessing ChEMBL database for accurate chemical data\n\n- Searching for compounds, targets, and bioactivity data\n\n\nWhen answering questions:\n\n1. Provide clear, accurate explanations\n\n2. Use ChEMBL tools to get precise chemical data\n\n3. Cite sources when possible\n\n4. Explain complex concepts in understandable terms\n\n5. Include relevant chemical properties and structures",
+            "\n\nAdditional Database Information:\n\n\n\nYour capabilities include:",
+            "\n\nWhen answering questions:",
+            "\n\nAlways prioritize accuracy and provide comprehensive information.",
+            "\n\nAdditional Database Information:\nChEMBL Database:"
+        ]
+        
+        for pattern in generic_patterns:
+            response = response.replace(pattern, "")
+        
+        # Remove any remaining "Additional Database Information" sections
+        import re
+        response = re.sub(r'\n\nAdditional Database Information:.*?(?=\n\n[A-Z]|$)', '', response, flags=re.DOTALL)
+        
+        # Clean up multiple line breaks
+        response = response.replace("\n\n\n\n", "\n\n")
+        response = response.replace("\n\n\n", "\n\n")
+        
+        return response.strip()
+
     def get_system_prompt(self) -> str:
         return """You are a Research Agent specialized in chemistry research and explanations.
 

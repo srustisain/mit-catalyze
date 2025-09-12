@@ -49,7 +49,6 @@ package-lock.json
 yarn.lock
 
 # React build
-react-build/
 build/
 dist/
 

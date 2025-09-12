@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>PDF Upload Test</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="p-8">
+    <h1 class="text-2xl font-bold mb-4">PDF Upload Test</h1>
+    
+    <div class="mb-4">
+        <button onclick="togglePdfUpload()" class="bg-blue-600 text-white px-4 py-2 rounded">
+            📄 Toggle PDF Upload
+        </button>
+    </div>
+    
+    <div id="pdfUploadArea" class="border-2 border-dashed border-blue-300 rounded-lg p-6 text-center" style="display: none;">
+        <div class="text-4xl mb-2">📄</div>
+        <h3 class="text-lg font-semibold mb-2">Upload PDF</h3>
+        <p class="text-sm text-gray-600 mb-4">Drag and drop your PDF here or click to browse</p>
+        <input type="file" id="pdfFileInput" accept=".pdf" class="hidden">
+        <button onclick="document.getElementById('pdfFileInput').click()" class="bg-blue-600 text-white px-4 py-2 rounded">
+            Choose PDF File
+        </button>
+        <div id="pdfUploadProgress" class="mt-4 hidden">
+            <div class="bg-gray-200 rounded-full h-2">
+                <div id="pdfProgressBar" class="bg-blue-600 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
+            </div>
+            <p id="pdfUploadStatus" class="text-sm mt-2">Uploading...</p>
+        </div>
+        <div id="pdfUploadSuccess" class="mt-4 hidden text-green-600 font-medium">
+            ✅ PDF uploaded successfully!
+        </div>
+        <div id="pdfUploadError" class="mt-4 hidden text-red-600 font-medium">
+            ❌ Upload failed. Please try again.
+        </div>
+    </div>
+    
+    <div id="result" class="mt-4 p-4 bg-gray-100 rounded hidden">
+        <h3 class="font-bold">Upload Result:</h3>
+        <pre id="resultContent"></pre>
+    </div>
+
+    <script>
+        function togglePdfUpload() {
+            const uploadArea = document.getElementById('pdfUploadArea');
+            if (uploadArea.style.display === 'none') {
+                uploadArea.style.display = 'block';
+            } else {
+                uploadArea.style.display = 'none';
+            }
+        }
+        
+        async function uploadPdf(file) {
+            const formData = new FormData();
+            formData.append('pdf', file);
+            
+            const progressDiv = document.getElementById('pdfUploadProgress');
+            const progressBar = document.getElementById('pdfProgressBar');
+            const statusText = document.getElementById('pdfUploadStatus');
+            
+            progressDiv.classList.remove('hidden');
+            document.getElementById('pdfUploadSuccess').classList.add('hidden');
+            document.getElementById('pdfUploadError').classList.add('hidden');
+            
+            try {
+                let progress = 0;
+                const progressInterval = setInterval(() => {
+                    progress += Math.random() * 30;
+                    if (progress > 90) progress = 90;
+                    progressBar.style.width = progress + '%';
+                    statusText.textContent = progress < 50 ? 'Uploading PDF...' : 'Processing PDF...';
+                }, 200);
+                
+                const response = await fetch('/api/upload-pdf', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                clearInterval(progressInterval);
+                progressBar.style.width = '100%';
+                statusText.textContent = 'Complete!';
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                setTimeout(() => {
+                    progressDiv.classList.add('hidden');
+                    document.getElementById('pdfUploadSuccess').classList.remove('hidden');
+                    document.getElementById('result').classList.remove('hidden');
+                    document.getElementById('resultContent').textContent = JSON.stringify(data, null, 2);
+                }, 500);
+                
+                console.log('PDF uploaded successfully:', data);
+                
+            } catch (error) {
+                clearInterval(progressInterval);
+                progressDiv.classList.add('hidden');
+                document.getElementById('pdfUploadError').classList.remove('hidden');
+                console.error('PDF upload failed:', error);
+            }
+        }
+        
+        // Setup file input
+        document.getElementById('pdfFileInput').addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                uploadPdf(e.target.files[0]);
+            }
+        });
+        
+        // Setup drag and drop
+        const uploadArea = document.getElementById('pdfUploadArea');
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('bg-blue-100');
+        });
+        
+        uploadArea.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('bg-blue-100');
+        });
+        
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('bg-blue-100');
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0 && files[0].type === 'application/pdf') {
+                uploadPdf(files[0]);
+            } else {
+                alert('Please upload a PDF file.');
+            }
+        });
+    </script>
+</body>
+</html>
