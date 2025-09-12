@@ -548,9 +548,6 @@ We welcome contributions from the chemistry and AI communities! Here's how you c
 
 ### **Getting Started**
 1. Check the [Issues](https://github.com/your-username/mit-catalyze/issues) page
-2. Read the [Contributing Guide](CONTRIBUTING.md)
-3. Join our [Discord](https://discord.gg/catalyze) community
-4. Start contributing!
 
 ---
 
@@ -562,22 +559,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🙏 **Acknowledgments**
 
-- **MIT Hackathon 2025** for the inspiration and platform
-- **OpenAI** for providing the GPT-4o API
+- **MIT LLM Hackathon for Applications in Materials and Chemistry 2025** for the inspiration and platform
 - **ChEMBL** for the comprehensive chemical database
-- **OpenTrons** for the automation platform integration
-- **Dynamic Devices** for the Lynx system support
-- **The Chemistry Community** for feedback and support
-
----
-
-## 📞 **Support & Contact**
-
-- **Documentation**: [docs/](docs/)
-- **Issues**: [GitHub Issues](https://github.com/your-username/mit-catalyze/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/your-username/mit-catalyze/discussions)
-- **Email**: catalyze-support@mit.edu
-
 ---
 
 <div align="center">
