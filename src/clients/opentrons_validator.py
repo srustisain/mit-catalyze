@@ -460,9 +460,6 @@ Generate the complete Python code for the protocol:
     def _create_opentrons_protocol(self, instructions: str, attempt: int) -> str:
         """Create an Opentrons protocol based on instructions"""
         return f"""
-# Generated Opentrons Protocol (Attempt {attempt + 1})
-# Instructions: {instructions}
-
 from opentrons import protocol_api
 
 metadata = {{
@@ -481,7 +478,6 @@ def run(protocol: protocol_api.ProtocolContext):
     # Load pipette
     pipette = protocol.load_instrument('p300_single', 'right', tip_racks=[tip_rack])
     
-    # Protocol implementation based on: {instructions}
     # Add your specific protocol steps here
     pipette.pick_up_tip()
     # Example: Transfer 100µL from reservoir to plate
@@ -495,9 +491,6 @@ def run(protocol: protocol_api.ProtocolContext):
     def _create_serial_dilution_protocol(self, instructions: str, attempt: int) -> str:
         """Create a serial dilution protocol based on detailed instructions"""
         return f"""
-# Generated Opentrons Protocol (Attempt {attempt + 1})
-# Instructions: {instructions}
-
 from opentrons import protocol_api
 
 metadata = {{
@@ -547,9 +540,6 @@ def run(protocol: protocol_api.ProtocolContext):
     def _create_elisa_protocol(self, instructions: str, attempt: int) -> str:
         """Create an ELISA protocol based on detailed instructions"""
         return f"""
-# Generated Opentrons Protocol (Attempt {attempt + 1})
-# Instructions: {instructions}
-
 from opentrons import protocol_api
 
 metadata = {{
@@ -591,9 +581,6 @@ def run(protocol: protocol_api.ProtocolContext):
     def _create_transfer_protocol(self, instructions: str, attempt: int) -> str:
         """Create a liquid transfer protocol"""
         return f"""
-# Generated Opentrons Protocol (Attempt {attempt + 1})
-# Instructions: {instructions}
-
 from opentrons import protocol_api
 
 metadata = {{
@@ -625,9 +612,6 @@ def run(protocol: protocol_api.ProtocolContext):
     def _create_pcr_protocol(self, instructions: str, attempt: int) -> str:
         """Create a PCR protocol"""
         return f"""
-# Generated Opentrons Protocol (Attempt {attempt + 1})
-# Instructions: {instructions}
-
 from opentrons import protocol_api
 
 metadata = {{
@@ -671,9 +655,6 @@ def run(protocol: protocol_api.ProtocolContext):
     def _create_dilution_protocol(self, instructions: str, attempt: int) -> str:
         """Create a dilution protocol"""
         return f"""
-# Generated Opentrons Protocol (Attempt {attempt + 1})
-# Instructions: {instructions}
-
 from opentrons import protocol_api
 
 metadata = {{
@@ -708,9 +689,6 @@ def run(protocol: protocol_api.ProtocolContext):
     def _create_general_protocol(self, instructions: str, attempt: int) -> str:
         """Create a general protocol"""
         return f"""
-# Generated Opentrons Protocol (Attempt {attempt + 1})
-# Instructions: {instructions}
-
 from opentrons import protocol_api
 
 metadata = {{
