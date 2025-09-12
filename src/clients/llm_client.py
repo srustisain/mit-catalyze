@@ -390,7 +390,7 @@ Format your response as JSON with the following structure:
         """Generate a conversational response from the LLM"""
         try:
             # Build conversation context
-            system_message = "You are Catalyze, an AI chemistry assistant specializing in materials science and chemistry. You help with research questions, protocol generation, lab automation, and safety analysis. Be helpful, accurate, and conversational."
+            system_message = "You are a chemistry and laboratory assistant. Answer questions about chemical compounds, lab protocols, automation, and safety procedures. Be accurate and helpful."
             
             if self.provider == "openai" and self.openai_client:
                 messages = [{"role": "system", "content": system_message}]

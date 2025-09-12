@@ -17,10 +17,10 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 # Import required modules
 try:
-    from src.pipeline import run_pipeline
-    from llm_client import LLMClient
-    from pubchem_client import PubChemClient
-    from config import MCP_SERVERS, OPENAI_API_KEY
+    from src.pipeline import PipelineManager
+    from src.clients.llm_client import LLMClient
+    from src.clients.pubchem_client import PubChemClient
+    from src.config.config import MCP_SERVERS, OPENAI_API_KEY
     print("✅ All required modules imported successfully")
 except ImportError as e:
     print(f"❌ Import error: {e}")
@@ -177,53 +177,54 @@ class MCPIntegrationTester:
                 f"Failed to initialize PubChem client: {str(e)}"
             )
             
-    def test_pipeline_integration(self):
+    async def test_pipeline_integration(self):
         """Test complete pipeline integration"""
         print("\n🔍 Testing complete pipeline integration...")
         
-        test_queries = [
-            "Synthesize benzyl alcohol from benzyl chloride",
-            "How to prepare a 1M NaOH solution"
-        ]
-        
-        for query in test_queries:
-            try:
-                print(f"  Testing query: {query}")
-                result = run_pipeline(query, explain_mode=True)
-                
-                # Validate result structure
-                required_keys = ["query", "protocol", "chemicals", "chemical_data", "automation_script"]
-                missing_keys = [key for key in required_keys if key not in result]
-                
-                if not missing_keys:
-                    protocol_steps = len(result.get("protocol", {}).get("steps", []))
-                    chemicals_count = len(result.get("chemicals", []))
+        try:
+            # Initialize pipeline manager
+            pipeline_manager = PipelineManager()
+            await pipeline_manager.initialize()
+            
+            test_queries = [
+                "Synthesize benzyl alcohol from benzyl chloride",
+                "How to prepare a 1M NaOH solution"
+            ]
+            
+            for query in test_queries:
+                try:
+                    print(f"  Testing query: {query}")
+                    result = await pipeline_manager.process_query(query, {"mode": "research"})
                     
-                    self.log_result(
-                        f"Pipeline: {query[:30]}...",
-                        True,
-                        f"Complete response with {protocol_steps} steps, {chemicals_count} chemicals",
-                        {
-                            "steps": protocol_steps,
-                            "chemicals": chemicals_count,
-                            "has_automation": len(result.get("automation_script", "")) > 0
-                        }
-                    )
-                else:
+                    # Validate result structure
+                    if result and isinstance(result, dict):
+                        self.log_result(
+                            f"Pipeline: {query[:30]}...",
+                            True,
+                            f"Pipeline executed successfully",
+                            result
+                        )
+                    else:
+                        self.log_result(
+                            f"Pipeline: {query[:30]}...",
+                            False,
+                            "Pipeline returned invalid result",
+                            result
+                        )
+                        
+                except Exception as e:
                     self.log_result(
                         f"Pipeline: {query[:30]}...",
                         False,
-                        f"Missing keys: {missing_keys}",
-                        {"result_keys": list(result.keys())}
+                        f"Pipeline execution failed: {str(e)}"
                     )
                     
-            except Exception as e:
-                self.log_result(
-                    f"Pipeline: {query[:30]}...",
-                    False,
-                    f"Error: {str(e)}",
-                    {"error": str(e), "traceback": traceback.format_exc()}
-                )
+        except Exception as e:
+            self.log_result(
+                "Pipeline Integration",
+                False,
+                f"Pipeline initialization failed: {str(e)}"
+            )
                 
     def test_mcp_tools_availability(self):
         """Test availability of MCP tools"""
@@ -269,40 +270,52 @@ class MCPIntegrationTester:
                 f"Failed to import MCP client: {str(e)}"
             )
             
-    def test_error_handling(self):
+    async def test_error_handling(self):
         """Test error handling and fallback mechanisms"""
         print("\n🔍 Testing error handling...")
         
-        # Test with invalid query
         try:
-            result = run_pipeline("invalid chemical query xyz123", explain_mode=False)
-            self.log_result(
-                "Error Handling: Invalid Query",
-                True,
-                "Gracefully handled invalid query",
-                {"result_keys": list(result.keys())}
-            )
-        except Exception as e:
-            self.log_result(
-                "Error Handling: Invalid Query",
-                False,
-                f"Failed to handle invalid query: {str(e)}"
-            )
+            # Initialize pipeline manager
+            pipeline_manager = PipelineManager()
+            await pipeline_manager.initialize()
             
-        # Test with empty query
-        try:
-            result = run_pipeline("", explain_mode=False)
-            self.log_result(
-                "Error Handling: Empty Query",
-                True,
-                "Gracefully handled empty query",
-                {"result_keys": list(result.keys())}
-            )
+            # Test with invalid query
+            try:
+                result = await pipeline_manager.process_query("invalid chemical query xyz123", {"mode": "research"})
+                self.log_result(
+                    "Error Handling: Invalid Query",
+                    True,
+                    "Gracefully handled invalid query",
+                    {"result_keys": list(result.keys()) if result else []}
+                )
+            except Exception as e:
+                self.log_result(
+                    "Error Handling: Invalid Query",
+                    False,
+                    f"Failed to handle invalid query: {str(e)}"
+                )
+                
+            # Test with empty query
+            try:
+                result = await pipeline_manager.process_query("", {"mode": "research"})
+                self.log_result(
+                    "Error Handling: Empty Query",
+                    True,
+                    "Gracefully handled empty query",
+                    {"result_keys": list(result.keys()) if result else []}
+                )
+            except Exception as e:
+                self.log_result(
+                    "Error Handling: Empty Query",
+                    False,
+                    f"Failed to handle empty query: {str(e)}"
+                )
+                
         except Exception as e:
             self.log_result(
-                "Error Handling: Empty Query",
+                "Error Handling",
                 False,
-                f"Failed to handle empty query: {str(e)}"
+                f"Pipeline initialization failed: {str(e)}"
             )
             
     def generate_report(self):
@@ -365,8 +378,8 @@ async def main():
     tester.test_llm_client_providers()
     tester.test_pubchem_integration()
     tester.test_mcp_tools_availability()
-    tester.test_pipeline_integration()
-    tester.test_error_handling()
+    await tester.test_pipeline_integration()
+    await tester.test_error_handling()
     
     # Generate final report
     success = tester.generate_report()

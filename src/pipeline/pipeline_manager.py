@@ -83,12 +83,25 @@ class PipelineManager:
             # Step 1: Route the query (if not already in a specific mode)
             if mode == "research" and not self._is_explicit_mode_query(query):
                 routing_decision = await self.router_agent.process_query(query, context)
-                suggested_agent = routing_decision.get("routing_decision", {}).get("agent", mode)
                 
-                # Use suggested agent if it's different from current mode
-                if suggested_agent != mode:
-                    self.logger.info(f"Router suggested {suggested_agent} instead of {mode}")
-                    mode = suggested_agent
+                # If the router successfully processed the query, return its response
+                if routing_decision.get("success") and routing_decision.get("response"):
+                    self.logger.info(f"Router processed query directly with {routing_decision.get('metadata', {}).get('intent', 'unknown')} agent")
+                    return {
+                        "success": routing_decision.get("success", True),
+                        "response": routing_decision.get("response", "No response generated"),
+                        "agent_used": routing_decision.get("metadata", {}).get("intent", "research"),
+                        "mode": routing_decision.get("metadata", {}).get("intent", "research"),
+                        "used_mcp": routing_decision.get("agent_response", {}).get("used_mcp", False),
+                        "timestamp": routing_decision.get("agent_response", {}).get("timestamp", datetime.now().isoformat()),
+                        "processing_time": (datetime.now() - start_time).total_seconds()
+                    }
+                else:
+                    # Fallback to suggested agent
+                    suggested_agent = routing_decision.get("metadata", {}).get("intent", mode)
+                    if suggested_agent != mode:
+                        self.logger.info(f"Router suggested {suggested_agent} instead of {mode}")
+                        mode = suggested_agent
             
             # Step 2: Process with the appropriate agent
             agent = self.agents.get(mode, self.research_agent)

@@ -50,73 +50,132 @@ class ResearchAgent(BaseAgent):
             """
             self.logger.info(f"Enhanced query with PDF context from: {pdf_context.get('filename', 'Unknown')}")
         
-        # First, try to get a basic OpenAI response
-        try:
-            conversation_history = context.get("conversation_history", []) if context else []
-            openai_response = self.llm_client.generate_chat_response(enhanced_query, conversation_history)
-            self.logger.info(f"Generated OpenAI response: {len(openai_response)} characters")
-        except Exception as e:
-            self.logger.error(f"OpenAI response failed: {e}")
-            openai_response = "I'm having trouble processing your question right now."
-        
-        # Try to enhance with ChEMBL data (only if no PDF context to avoid duplication)
-        chembl_enhancement = ""
-        if not pdf_context:  # Only use ChEMBL if no PDF context
+        # Use the LangGraph agent with MCP tools directly
+        if self.agent and self.mcp_client:
             try:
-                agent_result = await self._run_agent_safely(query, context)
+                # Let the LangGraph agent handle the query with MCP tools
+                agent_result = await self._run_agent_safely(enhanced_query, context)
                 
                 if agent_result.get("success"):
-                    # Extract ChEMBL data from agent response
-                    enhancement_parts = []
-                    
-                    # Look for chemical data in the response
+                    # Extract the response content
                     messages = agent_result.get("response", [])
+                    response_content = ""
+                    
                     for message in messages:
                         if hasattr(message, 'content') and message.content:
-                            content = message.content
-                            # Only add actual database results, not system prompts
-                            if any(keyword in content.lower() for keyword in ["chembl", "molecular weight", "formula", "structure"]) and "system" not in content.lower():
-                                enhancement_parts.append(f"ChEMBL Database: {content}")
+                            response_content += message.content + "\n"
                     
-                    if enhancement_parts:
-                        chembl_enhancement = "\n\n**Additional Database Information:**\n" + "\n".join(enhancement_parts)
-                        self.logger.info(f"Added ChEMBL enhancement: {len(chembl_enhancement)} characters")
-                    else:
-                        self.logger.info("No ChEMBL data extracted")
-                
+                    return {
+                        "success": True,
+                        "response": response_content.strip(),
+                        "agent": self.name,
+                        "used_mcp": True,
+                        "timestamp": self._get_timestamp()
+                    }
+                else:
+                    # Fallback to basic LLM response
+                    return await self._fallback_response(enhanced_query, context)
+                    
             except Exception as e:
-                self.logger.error(f"ChEMBL enhancement failed: {e}")
-                chembl_enhancement = "\n\n(Note: Database access temporarily unavailable)"
+                self.logger.error(f"LangGraph agent failed: {e}")
+                return await self._fallback_response(enhanced_query, context)
+        else:
+            # Fallback to basic LLM response if no agent available
+            return await self._fallback_response(enhanced_query, context)
+    
+    async def _fallback_response(self, query: str, context: Dict[str, Any] = None) -> Dict[str, Any]:
+        """Fallback response with direct MCP tool usage"""
+        try:
+            # Try to use MCP tools directly if available
+            mcp_enhancement = ""
+            if self.mcp_client:
+                try:
+                    # Use a simple compound search for chemical queries
+                    if any(keyword in query.lower() for keyword in ["molecular weight", "formula", "structure", "compound", "chemical"]):
+                        tools = await self.mcp_client.get_tools()
+                        search_tool = next((tool for tool in tools if tool.name == "search_compounds"), None)
+                        
+                        if search_tool:
+                            # Extract compound name from query
+                            compound_name = self._extract_compound_name(query)
+                            if compound_name:
+                                result = await search_tool.ainvoke({"query": compound_name, "limit": 3})
+                                if result and "molecules" in result:
+                                    mcp_enhancement = f"\n\n**Database Information:**\n{self._format_compound_data(result)}"
+                                    self.logger.info(f"Added MCP data: {len(mcp_enhancement)} characters")
+                except Exception as e:
+                    self.logger.warning(f"MCP tool usage failed: {e}")
+            
+            # Generate base response
+            conversation_history = context.get("conversation_history", []) if context else []
+            base_response = self.llm_client.generate_chat_response(query, conversation_history)
+            
+            # Combine with MCP data
+            final_response = base_response + mcp_enhancement
+            
+            self.logger.info(f"Generated fallback response: {len(final_response)} characters")
+            
+            return {
+                "success": True,
+                "response": final_response,
+                "agent": self.name,
+                "used_mcp": bool(mcp_enhancement),
+                "timestamp": self._get_timestamp()
+            }
+        except Exception as e:
+            self.logger.error(f"Fallback response failed: {e}")
+            return {
+                "success": False,
+                "response": "I'm having trouble processing your question right now.",
+                "agent": self.name,
+                "used_mcp": False,
+                "timestamp": self._get_timestamp()
+            }
+    
+    def _extract_compound_name(self, query: str) -> str:
+        """Extract compound name from query"""
+        # Simple extraction - look for common patterns
+        query_lower = query.lower()
         
-        # Combine responses
-        final_response = openai_response + chembl_enhancement
+        # Look for "molecular weight of X" pattern
+        if "molecular weight of" in query_lower:
+            return query.split("molecular weight of")[-1].strip().rstrip("?")
         
-        return {
-            "success": True,
-            "response": final_response,
-            "agent": self.name,
-            "used_mcp": bool(chembl_enhancement),
-            "timestamp": self._get_timestamp()
-        }
+        # Look for "what is X" pattern
+        if "what is" in query_lower and any(chem in query_lower for chem in ["aspirin", "caffeine", "compound", "chemical"]):
+            parts = query.split("what is")
+            if len(parts) > 1:
+                return parts[1].strip().rstrip("?")
+        
+        return ""
+    
+    def _format_compound_data(self, data: Dict[str, Any]) -> str:
+        """Format compound data from MCP response"""
+        if not data or "molecules" not in data:
+            return ""
+        
+        molecules = data["molecules"]
+        if not molecules:
+            return "No compound data found."
+        
+        result = []
+        for mol in molecules[:2]:  # Limit to 2 results
+            name = mol.get("pref_name", "Unknown")
+            mw = mol.get("molecule_properties", {}).get("molecular_weight")
+            smiles = mol.get("molecule_structures", {}).get("canonical_smiles", "")
+            
+            info = f"• {name}"
+            if mw:
+                info += f" (MW: {mw} g/mol)"
+            if smiles:
+                info += f" [SMILES: {smiles}]"
+            
+            result.append(info)
+        
+        return "\n".join(result)
     
     def get_system_prompt(self) -> str:
-        return """You are a Research Agent specialized in chemistry research and explanations.
-
-Your capabilities include:
-- Answering chemistry questions with detailed explanations
-- Providing chemical properties, structures, and formulas
-- Explaining chemical reactions and mechanisms
-- Accessing ChEMBL database for accurate chemical data
-- Searching for compounds, targets, and bioactivity data
-
-When answering questions:
-1. Provide clear, accurate explanations
-2. Use ChEMBL tools to get precise chemical data
-3. Cite sources when possible
-4. Explain complex concepts in understandable terms
-5. Include relevant chemical properties and structures
-
-Always prioritize accuracy and provide comprehensive information."""
+        return """You are a chemistry research specialist. Answer questions about chemical properties, reactions, mechanisms, and compounds. Use ChEMBL tools for accurate data. Provide clear explanations with chemical formulas, structures, and relevant properties."""
     
     def _get_timestamp(self):
         """Get current timestamp"""

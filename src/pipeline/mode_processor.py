@@ -33,7 +33,7 @@ class ModeProcessor:
                 "output_format": "structured_protocol"
             },
             AgentMode.AUTOMATE: {
-                "keywords": ["automate", "script", "robot", "opentrons", "pyhamilton", "automation"],
+                "keywords": ["automate", "script", "robot", "opentrons", "pyhamilton", "automation", "write code", "generate code", "create code", "code for", "pipette", "liquid handling"],
                 "focus": "lab automation scripts",
                 "output_format": "python_code"
             },
@@ -75,7 +75,7 @@ class ModeProcessor:
         # Check for explicit mode indicators
         mode_indicators = {
             AgentMode.PROTOCOL: ["protocol", "procedure", "steps", "method", "experiment"],
-            AgentMode.AUTOMATE: ["automate", "script", "robot", "opentrons", "pyhamilton"],
+            AgentMode.AUTOMATE: ["automate", "script", "robot", "opentrons", "pyhamilton", "write code", "generate code", "create code", "code for", "pipette", "liquid handling"],
             AgentMode.SAFETY: ["safety", "hazard", "dangerous", "toxic", "risk"],
             AgentMode.RESEARCH: ["what is", "explain", "tell me about", "how does", "why"]
         }
