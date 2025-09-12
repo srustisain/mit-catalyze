@@ -362,15 +362,6 @@
                 <!-- Right Side - Main Chat Area -->
                 <div class="flex-1">
 
-            <!-- Tab Selection -->
-            <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-                <div class="flex space-x-4">
-                    <button class="tab-mode-btn px-4 py-2 rounded-lg font-medium transition-all button-press scientist-gradient text-white" data-tab-mode="research">🔬 Research</button>
-                    <button class="tab-mode-btn px-4 py-2 rounded-lg font-medium transition-all button-press text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700" data-tab-mode="protocol">📋 Protocol</button>
-                    <button class="tab-mode-btn px-4 py-2 rounded-lg font-medium transition-all button-press text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700" data-tab-mode="automate">🤖 Automate</button>
-                    <button class="tab-mode-btn px-4 py-2 rounded-lg font-medium transition-all button-press text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700" data-tab-mode="export">📤 Export</button>
-                </div>
-            </div>
 
             <!-- Chat Messages -->
             <div id="chatMessages" class="p-6 min-h-96">
@@ -421,49 +412,14 @@
                     <input type="text" id="chatInput" placeholder="Ask about chemistry, materials, or lab protocols..." 
                            class="input-focus flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400">
                     
-                    <!-- Research Tab Buttons -->
-                    <div id="researchButtons" class="flex space-x-4">
+                    <!-- Simple Chat Buttons -->
+                    <div class="flex space-x-4">
                         <button onclick="togglePdfUpload()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-lg font-medium hover:opacity-90 transition-all button-press flex items-center space-x-2" title="Upload PDF">
                             <span>📄</span>
                         </button>
                         <button id="sendButton" class="scientist-gradient text-white px-6 py-3 rounded-lg font-medium hover:opacity-90 transition-all button-press flex items-center space-x-2">
                             <span>Send</span>
                             <span>✈️</span>
-                        </button>
-                    </div>
-                    
-                    <!-- Protocol Tab Buttons -->
-                    <div id="protocolButtons" class="flex space-x-4" style="display: none;">
-                        <button id="automateButton" class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-medium hover:opacity-90 transition-all button-press flex items-center space-x-2">
-                            <span>🤖 Automate</span>
-                        </button>
-                        <button id="sendButtonProtocol" class="scientist-gradient text-white px-6 py-3 rounded-lg font-medium hover:opacity-90 transition-all button-press flex items-center space-x-2">
-                            <span>Send</span>
-                            <span>✈️</span>
-                        </button>
-                    </div>
-                    
-                    <!-- Automate Tab Buttons -->
-                    <div id="automateButtons" class="flex space-x-4" style="display: none;">
-                        <button id="exportButton" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium hover:opacity-90 transition-all button-press flex items-center space-x-2">
-                            <span>📤 Export</span>
-                        </button>
-                        <button id="sendButtonAutomate" class="scientist-gradient text-white px-6 py-3 rounded-lg font-medium hover:opacity-90 transition-all button-press flex items-center space-x-2">
-                            <span>Send</span>
-                            <span>✈️</span>
-                        </button>
-                    </div>
-                    
-                    <!-- Export Tab Buttons -->
-                    <div id="exportButtons" class="flex space-x-4" style="display: none;">
-                        <button id="exportAllButton" class="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg font-medium hover:opacity-90 transition-all button-press flex items-center space-x-2">
-                            <span>📤 Export All</span>
-                        </button>
-                        <button id="exportProtocolButton" class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-medium hover:opacity-90 transition-all button-press flex items-center space-x-2">
-                            <span>📋 Export Protocol</span>
-                        </button>
-                        <button id="exportCodeButton" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium hover:opacity-90 transition-all button-press flex items-center space-x-2">
-                            <span>🤖 Export Code</span>
                         </button>
                     </div>
                 </div>
@@ -475,105 +431,14 @@
         <div class="mt-12 bg-white dark:bg-gray-800 rounded-2xl smooth-shadow hover-lift border border-gray-200 dark:border-gray-700 overflow-hidden">
             <div class="scientist-gradient">
                 <nav class="flex space-x-8 px-6">
-                    <button class="tab-btn py-4 px-1 border-b-4 border-transparent text-white/80 hover:text-white font-medium transition-all button-press" data-tab="calculator">🧮 Calculator</button>
-                    <button class="tab-btn py-4 px-1 border-b-4 border-transparent text-white/80 hover:text-white font-medium transition-all button-press" data-tab="protocol">📋 Protocol</button>
-                    <button class="tab-btn py-4 px-1 border-b-4 border-transparent text-white/80 hover:text-white font-medium transition-all button-press" data-tab="automate">🤖 Automate</button>
-                    <button class="tab-btn py-4 px-1 border-b-4 border-transparent text-white/80 hover:text-white font-medium transition-all button-press" data-tab="notes">📝 Notes</button>
+                    <button class="tab-btn py-4 px-1 border-b-4 border-white text-white font-medium transition-all button-press" data-tab="notes">📝 Notes</button>
                     <button class="tab-btn py-4 px-1 border-b-4 border-transparent text-white/80 hover:text-white font-medium transition-all button-press" data-tab="data-visualizer">📊 Data Visualizer</button>
                     <button class="tab-btn py-4 px-1 border-b-4 border-transparent text-white/80 hover:text-white font-medium transition-all button-press" data-tab="export">📤 Export</button>
                 </nav>
             </div>
 
-            <!-- Calculator Tab -->
-            <div id="calculator" class="tab-content active p-6">
-                <h3 class="text-2xl font-semibold text-gray-900 dark:text-white mb-6">Chemistry Calculator</h3>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <!-- Molarity Calculator -->
-                    <div class="capability-card bg-gray-50 dark:bg-gray-700 rounded-lg p-6">
-                        <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Molarity Calculator</h4>
-                        <div class="space-y-4">
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Mass (g)</label>
-                                <input type="number" id="mass" placeholder="Enter mass" class="input-focus w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white">
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Molecular Weight (g/mol)</label>
-                                <input type="number" id="mw" placeholder="Enter MW" class="input-focus w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white">
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Volume (L)</label>
-                                <input type="number" id="volume" placeholder="Enter volume" class="input-focus w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white">
-                            </div>
-                            <button onclick="calculateMolarity()" class="w-full scientist-gradient text-white py-2 px-4 rounded-lg font-medium hover:opacity-90 transition-all button-press">Calculate Molarity</button>
-                            <div id="molarityResult" class="text-center font-medium text-green-600 dark:text-green-400 hidden"></div>
-                        </div>
-                    </div>
-
-                    <!-- pH Calculator -->
-                    <div class="capability-card bg-gray-50 dark:bg-gray-700 rounded-lg p-6">
-                        <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">pH Calculator</h4>
-                        <div class="space-y-4">
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">H+ Concentration (M)</label>
-                                <input type="number" id="hConcentration" placeholder="Enter [H+]" class="input-focus w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white">
-                            </div>
-                            <button onclick="calculatePH()" class="w-full scientist-gradient text-white py-2 px-4 rounded-lg font-medium hover:opacity-90 transition-all button-press">Calculate pH</button>
-                            <div id="phResult" class="text-center font-medium text-green-600 dark:text-green-400 hidden"></div>
-                        </div>
-                    </div>
-
-                    <!-- Yield Calculator -->
-                    <div class="capability-card bg-gray-50 dark:bg-gray-700 rounded-lg p-6">
-                        <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Reaction Yield Calculator</h4>
-                        <div class="space-y-4">
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Actual Yield (g)</label>
-                                <input type="number" id="actualYield" placeholder="Enter actual yield" class="input-focus w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white">
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Theoretical Yield (g)</label>
-                                <input type="number" id="theoreticalYield" placeholder="Enter theoretical yield" class="input-focus w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white">
-                            </div>
-                            <button onclick="calculateYield()" class="w-full scientist-gradient text-white py-2 px-4 rounded-lg font-medium hover:opacity-90 transition-all button-press">Calculate Yield</button>
-                            <div id="yieldResult" class="text-center font-medium text-green-600 dark:text-green-400 hidden"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Protocol Tab -->
-            <div id="protocol" class="tab-content p-6">
-                <h3 class="text-2xl font-semibold text-gray-900 dark:text-white mb-6">Protocol Generation</h3>
-                <div class="capability-card bg-gray-50 dark:bg-gray-700 rounded-lg p-6">
-                    <div id="protocolContent" class="min-h-64">
-                        <div class="text-center text-gray-500 dark:text-gray-400">
-                            <div class="text-4xl mb-4">📋</div>
-                            <p>Generate a protocol by clicking the Protocol button after your research interaction.</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Automate Tab -->
-            <div id="automate" class="tab-content p-6">
-                <h3 class="text-2xl font-semibold text-gray-900 dark:text-white mb-6">Lab Automation</h3>
-                <div class="capability-card bg-gray-50 dark:bg-gray-700 rounded-lg p-6">
-                    <div id="automationContent" class="min-h-64">
-                        <div class="text-center text-gray-500 dark:text-gray-400">
-                            <div class="text-4xl mb-4">🤖</div>
-                            <p>Generate automation code by clicking the Automate button after protocol generation.</p>
-                        </div>
-                    </div>
-                    <div class="mt-4">
-                        <button id="exportButton" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium hover:opacity-90 transition-all button-press flex items-center space-x-2" style="display: none;">
-                            <span>📤 Export</span>
-                        </button>
-                    </div>
-                </div>
-            </div>
-
             <!-- Notes Tab -->
-            <div id="notes" class="tab-content p-6">
+            <div id="notes" class="tab-content active p-6">
                 <h3 class="text-2xl font-semibold text-gray-900 dark:text-white mb-6">Lab Notes</h3>
                 <div class="capability-card bg-gray-50 dark:bg-gray-700 rounded-lg p-6">
                     <textarea id="notesTextarea" rows="12" placeholder="Write your lab notes here..." 
@@ -702,7 +567,6 @@
             // Get DOM elements
             const tabButtons = document.querySelectorAll('.tab-btn');
             const tabContents = document.querySelectorAll('.tab-content');
-            const tabModeBtns = document.querySelectorAll('.tab-mode-btn');
             const chatInput = document.getElementById('chatInput');
             const chatMessages = document.getElementById('chatMessages');
             const queryCount = document.getElementById('queryCount');
@@ -711,21 +575,8 @@
             const newChatBtn = document.getElementById('newChatBtn');
             const chatHistoryContainer = document.getElementById('chatHistory');
             
-            // Button groups
-            const researchButtons = document.getElementById('researchButtons');
-            const protocolButtons = document.getElementById('protocolButtons');
-            const automateButtons = document.getElementById('automateButtons');
-            const exportButtons = document.getElementById('exportButtons');
-            
             // Individual buttons
             const sendButton = document.getElementById('sendButton');
-            const sendButtonProtocol = document.getElementById('sendButtonProtocol');
-            const sendButtonAutomate = document.getElementById('sendButtonAutomate');
-            const automateButton = document.getElementById('automateButton');
-            const exportButton = document.getElementById('exportButton');
-            const exportAllButton = document.getElementById('exportAllButton');
-            const exportProtocolButton = document.getElementById('exportProtocolButton');
-            const exportCodeButton = document.getElementById('exportCodeButton');
             
             // Theme management
             const themeToggle = document.getElementById('themeToggle');
@@ -764,14 +615,14 @@
             updateThemeUI(savedTheme);
 
             // Tab switching
-            // Set Calculator as default active tab
-            const calculatorTab = document.querySelector('[data-tab="calculator"]');
-            const calculatorContent = document.getElementById('calculator');
-            if (calculatorTab && calculatorContent) {
-                calculatorTab.classList.add('active');
-                calculatorTab.classList.remove('border-transparent', 'text-white/80');
-                calculatorTab.classList.add('border-white', 'text-white');
-                calculatorContent.classList.add('active');
+            // Set Notes as default active tab
+            const notesTab = document.querySelector('[data-tab="notes"]');
+            const notesContent = document.getElementById('notes');
+            if (notesTab && notesContent) {
+                notesTab.classList.add('active');
+                notesTab.classList.remove('border-transparent', 'text-white/80');
+                notesTab.classList.add('border-white', 'text-white');
+                notesContent.classList.add('active');
             }
             
             tabButtons.forEach(button => {
@@ -794,71 +645,6 @@
                 });
             });
 
-            // Tab Mode switching
-            tabModeBtns.forEach(btn => {
-                btn.addEventListener('click', () => {
-                    const newTabMode = btn.getAttribute('data-tab-mode');
-                    switchTabMode(newTabMode);
-                });
-            });
-            
-            // Function to switch tab mode and update UI
-            function switchTabMode(tabMode) {
-                currentTabMode = tabMode;
-                
-                // Update tab mode buttons
-                tabModeBtns.forEach(b => {
-                    b.classList.remove('active');
-                    b.classList.remove('scientist-gradient', 'text-white');
-                    b.classList.add('text-gray-600', 'dark:text-gray-400', 'hover:bg-gray-100', 'dark:hover:bg-gray-700');
-                });
-                
-                const activeBtn = document.querySelector(`[data-tab-mode="${tabMode}"]`);
-                if (activeBtn) {
-                    activeBtn.classList.add('active');
-                    activeBtn.classList.remove('text-gray-600', 'dark:text-gray-400', 'hover:bg-gray-100', 'dark:hover:bg-gray-700');
-                    activeBtn.classList.add('scientist-gradient', 'text-white');
-                }
-                
-                // Show/hide button groups
-                researchButtons.style.display = 'none';
-                protocolButtons.style.display = 'none';
-                automateButtons.style.display = 'none';
-                exportButtons.style.display = 'none';
-                
-                switch(tabMode) {
-                    case 'research':
-                        researchButtons.style.display = 'flex';
-                        break;
-                    case 'protocol':
-                        protocolButtons.style.display = 'flex';
-                        break;
-                    case 'automate':
-                        automateButtons.style.display = 'flex';
-                        // Auto-generate code when switching to automate tab
-                        if (currentProtocol && !currentAutomationCode) {
-                            generateAutomationCode();
-                        }
-                        break;
-                    case 'export':
-                        exportButtons.style.display = 'flex';
-                        break;
-                }
-                
-                // Update chat input placeholder
-                updateChatPlaceholder(tabMode);
-            }
-            
-            // Update chat input placeholder based on tab mode
-            function updateChatPlaceholder(tabMode) {
-                const placeholders = {
-                    'research': 'Ask about chemistry, materials, or lab protocols...',
-                    'protocol': 'Refine or ask questions about the protocol...',
-                    'automate': 'Ask questions about the automation code...',
-                    'export': 'Enter any additional notes for export...'
-                };
-                chatInput.placeholder = placeholders[tabMode] || 'Enter your message...';
-            }
 
             // Helper function to switch tabs
             function switchToTab(tabId) {
@@ -996,26 +782,7 @@
             }
             
             // Button Event Listeners
-            automateButton.addEventListener('click', () => {
-                switchTabMode('automate');
-            });
             
-            exportButton.addEventListener('click', () => {
-                switchTabMode('export');
-            });
-            
-            // Export button handlers
-            exportAllButton.addEventListener('click', () => {
-                exportAllData();
-            });
-            
-            exportProtocolButton.addEventListener('click', () => {
-                exportProtocolData();
-            });
-            
-            exportCodeButton.addEventListener('click', () => {
-                exportCodeData();
-            });
             
             // Export functions
             function exportAllData() {
@@ -1082,8 +849,6 @@
                 currentProtocol = null;
                 currentAutomationCode = null;
                 
-                // Reset to research tab
-                switchTabMode('research');
                 
                 // Clear current chat messages
                 chatMessages.innerHTML = `
@@ -1194,7 +959,7 @@
                 
                 messageDiv.innerHTML = `
                     <div class="bg-gray-100 dark:bg-gray-700 rounded-lg p-4 ${isUser ? 'bg-blue-100 dark:bg-blue-900' : ''} ${isLoading ? 'animate-pulse' : ''}">
-                        <p class="text-gray-900 dark:text-white">${content}</p>
+                        <p class="text-gray-900 dark:text-white whitespace-pre-line">${content}</p>
                     </div>
                 `;
                 chatMessages.appendChild(messageDiv);
@@ -1428,48 +1193,6 @@
             }
 
 
-            // Calculator functions
-            function calculateMolarity() {
-                const mass = parseFloat(document.getElementById('mass').value);
-                const mw = parseFloat(document.getElementById('mw').value);
-                const volume = parseFloat(document.getElementById('volume').value);
-                
-                if (mass && mw && volume) {
-                    const molarity = mass / (mw * volume);
-                    const result = document.getElementById('molarityResult');
-                    result.textContent = `Molarity = ${molarity.toFixed(4)} M`;
-                    result.style.display = 'block';
-                } else {
-                    alert('Please fill in all fields');
-                }
-            }
-
-            function calculatePH() {
-                const hConcentration = parseFloat(document.getElementById('hConcentration').value);
-                
-                if (hConcentration && hConcentration > 0) {
-                    const ph = -Math.log10(hConcentration);
-                    const result = document.getElementById('phResult');
-                    result.textContent = `pH = ${ph.toFixed(2)}`;
-                    result.style.display = 'block';
-                } else {
-                    alert('Please enter a valid H+ concentration');
-                }
-            }
-
-            function calculateYield() {
-                const actual = parseFloat(document.getElementById('actualYield').value);
-                const theoretical = parseFloat(document.getElementById('theoreticalYield').value);
-                
-                if (actual && theoretical && theoretical > 0) {
-                    const yield = (actual / theoretical) * 100;
-                    const result = document.getElementById('yieldResult');
-                    result.textContent = `Yield = ${yield.toFixed(1)}%`;
-                    result.style.display = 'block';
-                } else {
-                    alert('Please fill in all fields with valid numbers');
-                }
-            }
 
             // Notes functions
             function saveNotes() {
@@ -1803,9 +1526,6 @@
             }
 
             // Make functions globally accessible
-            window.calculateMolarity = calculateMolarity;
-            window.calculatePH = calculatePH;
-            window.calculateYield = calculateYield;
             window.saveNotes = saveNotes;
             window.clearNotes = clearNotes;
             window.selectChartType = selectChartType;
