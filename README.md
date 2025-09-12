@@ -1,152 +1,131 @@
 # 🧪 Catalyze - AI-Powered Chemistry Assistant
 
-**Catalyze** is an AI-powered chemistry assistant that transforms research questions into detailed laboratory protocols and automation scripts. Built for the LLM Hackathon for Applications in Material Science & Chemistry.
+A beautiful, fully-functional AI chemistry assistant for material science and chemistry research.
 
-## 🚀 Features
+## ✨ Features
 
-- **🔬 Research Questions**: Answer chemistry and materials science questions using PubChem data
-- **📋 Protocol Generation**: Convert queries into step-by-step laboratory procedures
-- **🤖 Lab Automation**: Generate Opentrons automation scripts for liquid handling
-- **⚠️ Safety Information**: Get hazard warnings and safety precautions
-- **📱 Mobile-Friendly**: Works on any device through web interface
+- **🔬 Research Mode**: Ask chemistry questions and get detailed explanations
+- **📋 Protocol Generation**: Generate step-by-step lab protocols
+- **🤖 Lab Automation**: Create Python scripts for Opentrons, PyHamilton
+- **🛡️ Safety Analysis**: Get safety information and hazard warnings
+- **📊 Data Visualization**: Advanced charts and graphs with offline capability
+- **🧮 Calculators**: Molarity, pH, reaction yield calculators
+- **📝 Notes**: Take and save research notes
+- **📤 Export**: Export protocols and data in multiple formats
+- **🌙 Dark Mode**: Beautiful dark/light theme toggle
+- **💜 Purple Gradient Theme**: Scientist-friendly UI design
 
-## 🛠️ Tech Stack
+## 🚀 Quick Start
 
-- **Frontend**: Streamlit (mobile-responsive)
-- **Backend**: Python FastAPI
-- **LLM**: OpenAI GPT-3.5-turbo
-- **Data Sources**: PubChem API
-- **Automation**: Opentrons Python API
-
-## 📦 Installation
-
-1. **Clone the repository**:
-   ```bash
-   git clone <repository-url>
-   cd Catalyze
-   ```
-
-2. **Install dependencies**:
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-3. **Set up environment variables**:
-   Create a `.env` file in the root directory:
-   ```bash
-   OPENAI_API_KEY=your_openai_api_key_here
-   ```
-
-4. **Run the application**:
-   ```bash
-   streamlit run app.py
-   ```
-
-5. **Access the app**:
-   Open your browser and go to `http://localhost:8501`
-
-## 🎯 Demo Queries
-
-Try these example queries to see Catalyze in action:
-
-- "Synthesize benzyl alcohol from benzyl chloride"
-- "Which solid electrolytes are stable above 60°C?"
-- "Top perovskites with band gap 1.3-1.7 eV"
-- "Greener solvent replacements for DMF"
-
-## 📱 Mobile Usage
-
-Catalyze is designed to work on any device:
-- **Smartphones**: Full functionality through web browser
-- **Tablets**: Optimized interface for touch interaction
-- **Desktop**: Full feature set with keyboard shortcuts
-
-## 🔧 API Integration
-
-### PubChem Integration
-- Automatic chemical name extraction from queries
-- Real-time chemical property lookup
-- Safety information and hazard identification
-
-### LLM Integration
-- Protocol generation using OpenAI GPT-3.5-turbo
-- "Explain Like I'm New" mode for educational content
-- Safety validation and protocol optimization
-
-### Opentrons Integration
-- Automatic script generation for liquid handling
-- Support for common labware and pipettes
-- Protocol validation and optimization
-
-## 📊 Example Output
-
-### Protocol Generation
-```
-Step 1: Preparation
-- Set up 50 mL round-bottom flask with magnetic stirrer
-- Ensure proper ventilation
-
-Step 2: Reaction Setup
-- Dissolve benzyl chloride in 10 mL ethanol
-- Add aqueous NaOH solution slowly with stirring
-
-Step 3: Reaction
-- Heat at 60°C for 3 hours under reflux
-- Monitor reaction progress
+### Option 1: Simple Start
+```bash
+./start_catalyze.sh
 ```
 
-### Automation Script
-```python
-from opentrons import protocol_api
+### Option 2: Manual Start
+```bash
+# Activate virtual environment
+source venv/bin/activate
 
-def run(protocol: protocol_api.ProtocolContext):
-    # Labware setup
-    tiprack = protocol.load_labware('opentrons_96_tiprack_300ul', 1)
-    plate = protocol.load_labware('corning_96_wellplate_360ul_flat', 2)
-    pipette = protocol.load_instrument('p300_single', 'right', tip_racks=[tiprack])
-    
-    # Protocol steps
-    pipette.transfer(100, plate['A1'], plate['B1'])
-    pipette.mix(3, 150, plate['B1'])
+# Start the app
+python app/flask_app.py
 ```
 
-## 🚨 Safety Features
+Then open: **http://localhost:5003**
 
-- **Hazard Identification**: Automatic detection of toxic, corrosive, and flammable chemicals
-- **Safety Precautions**: PPE recommendations and handling guidelines
-- **Waste Management**: Proper disposal instructions for different waste streams
-- **Protocol Validation**: Safety checks and completeness validation
+### Option 3: With ChEMBL MCP Server (Advanced)
+```bash
+# Initialize submodules (first time only)
+./manage_submodules.sh init
 
-## 🔮 Future Enhancements
+# Install Node.js dependencies
+./manage_submodules.sh install
 
-- **PDF Upload**: Extract protocols from research papers
-- **Reaction Visualization**: Interactive reaction diagrams
-- **Green Chemistry Scoring**: Environmental impact assessment
-- **Multi-language Support**: International accessibility
-- **Advanced Automation**: Support for more lab equipment
+# Start the app
+source venv/bin/activate && python app/flask_app.py
+```
 
-## 🤝 Contributing
+## 📁 Project Structure
 
-This project was built for the LLM Hackathon for Applications in Material Science & Chemistry. Contributions are welcome!
+```
+mit-catalyze/
+├── app/
+│   └── flask_app.py        # Main Flask backend
+├── react-build/
+│   └── index.html          # Beautiful frontend (HTML/CSS/JS)
+├── mcp_servers/
+│   └── chembl-mcp-server/  # ChEMBL MCP Server (Git submodule)
+├── src/
+│   ├── clients/            # API clients (LLM, PubChem)
+│   ├── generators/          # Protocol & automation generators
+│   ├── config/             # Configuration files
+│   └── pipeline.py          # Main processing pipeline
+├── venv/                   # Python virtual environment
+├── pyproject.toml          # Python dependencies
+├── start_catalyze.sh       # Simple startup script
+├── manage_submodules.sh     # Submodule management script
+├── .gitmodules             # Git submodule configuration
+└── README.md               # This file
+```
 
-## 📄 License
+## 🎯 What Makes This Special
 
-This project is open source and available under the MIT License.
+- **Single HTML File**: Everything runs from one beautiful `react-build/index.html`
+- **No React Build Process**: Pure HTML/CSS/JavaScript - fast and simple
+- **Fully Functional**: All features work perfectly without internet
+- **Beautiful UI**: Purple gradient theme with smooth animations
+- **Clean Codebase**: Minimal, focused, and maintainable
+- **🧪 ChEMBL Integration**: Access to 27 specialized chemistry tools via MCP
+- **🤖 Hybrid AI**: Combines OpenAI knowledge with ChEMBL database accuracy
 
-## 👥 Team
+## 🧪 ChEMBL MCP Server Integration
 
-- **Samanvya Tripathi** - Backend Development & LLM Integration
-- **Srusti Sain** - Frontend Development & UI/UX Design
+This project integrates with the [ChEMBL MCP Server](https://github.com/Augmented-Nature/ChEMBL-MCP-Server) to provide access to 27 specialized chemistry tools:
 
-## 🏆 Hackathon Submission
+### Core Features
+- **Compound Search**: Search ChEMBL database by name, synonym, or identifier
+- **Target Analysis**: Search biological targets and get detailed information
+- **Bioactivity Data**: Access bioactivity measurements and assay results
+- **Drug Development**: Search approved drugs and clinical candidates
+- **Chemical Properties**: Analyze ADMET properties and drug-likeness
 
-**Project Name**: Catalyze / ChemPilot / Alkemy  
-**Category**: LLM Applications in Material Science & Chemistry  
-**Demo**: [Live Demo Link]  
-**Pitch**: [2-minute pitch video]
+### How It Works
+1. **Smart Routing**: Chemistry questions automatically trigger ChEMBL integration
+2. **Hybrid Approach**: OpenAI provides main answers, ChEMBL enhances with database data
+3. **Graceful Fallback**: If ChEMBL fails, you still get OpenAI responses
+4. **Detailed Logging**: Track system behavior with comprehensive logs
+
+### Submodule Management
+```bash
+# Check submodule status
+./manage_submodules.sh status
+
+# Update to latest version
+./manage_submodules.sh update
+
+# Reinstall dependencies
+./manage_submodules.sh install
+```
+
+## 🔧 Dependencies
+
+- **Python**: All dependencies in `pyproject.toml` and installed in `venv/`
+- **Node.js**: Required for ChEMBL MCP Server (installed via submodule)
+
+## 🌐 Access
+
+- **Local**: http://localhost:5003
+- **Network**: http://[your-ip]:5003
+
+## 📱 Features Overview
+
+1. **Chat Interface**: Ask chemistry questions with Research/Protocol/Automate/Safety modes
+2. **Chat History**: Create named chats, manage conversation history
+3. **Capabilities Display**: See what Catalyze can do
+4. **Results Tabs**: Calculator, Notes, Data Visualizer, Export
+5. **Dark Mode**: Toggle between light and dark themes
+6. **Responsive Design**: Works on desktop and mobile
 
 ---
 
-*Built with ❤️ for the chemistry and materials science community*
-
-
+**Built for MIT Hackathon 2025** 🎓

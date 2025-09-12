@@ -1,0 +1,172 @@
+{
+  "summary": {
+    "total_tests": 23,
+    "passed_tests": 22,
+    "failed_tests": 1,
+    "success_rate": 95.65217391304348,
+    "total_time": 5.782607
+  },
+  "test_results": [
+    {
+      "test_name": "OpentronsValidator Init",
+      "success": true,
+      "details": "Initialized with 3 max retries",
+      "timestamp": "20:58:39",
+      "data": null
+    },
+    {
+      "test_name": "AutomateAgent Init",
+      "success": true,
+      "details": "Initialized successfully",
+      "timestamp": "20:58:39",
+      "data": null
+    },
+    {
+      "test_name": "OpentronsCodeGenerator Init",
+      "success": true,
+      "details": "Initialized with validator",
+      "timestamp": "20:58:39",
+      "data": null
+    },
+    {
+      "test_name": "Detection: 'Create an Opentrons protocol f...'",
+      "success": true,
+      "details": "Expected: True, Got: True",
+      "timestamp": "20:58:40",
+      "data": null
+    },
+    {
+      "test_name": "Detection: 'Generate OT-2 liquid handling ...'",
+      "success": true,
+      "details": "Expected: True, Got: True",
+      "timestamp": "20:58:40",
+      "data": null
+    },
+    {
+      "test_name": "Detection: 'Make a Flex protocol for sampl...'",
+      "success": true,
+      "details": "Expected: True, Got: True",
+      "timestamp": "20:58:40",
+      "data": null
+    },
+    {
+      "test_name": "Detection: 'Create a PyHamilton automation...'",
+      "success": true,
+      "details": "Expected: False, Got: False",
+      "timestamp": "20:58:40",
+      "data": null
+    },
+    {
+      "test_name": "Detection: 'Generate a general lab automat...'",
+      "success": true,
+      "details": "Expected: False, Got: False",
+      "timestamp": "20:58:40",
+      "data": null
+    },
+    {
+      "test_name": "Detection: 'Transfer 100\u03bcL from A1 to B1 u...'",
+      "success": true,
+      "details": "Expected: True, Got: True",
+      "timestamp": "20:58:40",
+      "data": null
+    },
+    {
+      "test_name": "Detection: 'Set up a thermocycler protocol...'",
+      "success": true,
+      "details": "Expected: True, Got: True",
+      "timestamp": "20:58:40",
+      "data": null
+    },
+    {
+      "test_name": "Detection: 'Create a simple Python script...'",
+      "success": true,
+      "details": "Expected: False, Got: False",
+      "timestamp": "20:58:40",
+      "data": null
+    },
+    {
+      "test_name": "Validation: Basic Protocol",
+      "success": true,
+      "details": "Success: True, Time: 0.025s",
+      "timestamp": "20:58:40",
+      "data": null
+    },
+    {
+      "test_name": "Validation: Multi-Well Transfer",
+      "success": true,
+      "details": "Success: True, Time: 0.028s",
+      "timestamp": "20:58:40",
+      "data": null
+    },
+    {
+      "test_name": "Error Validation: Syntax Error",
+      "success": true,
+      "details": "Expected failure: True, Errors: 1",
+      "timestamp": "20:58:40",
+      "data": null
+    },
+    {
+      "test_name": "Error Validation: Import Error",
+      "success": true,
+      "details": "Expected failure: True, Errors: 1",
+      "timestamp": "20:58:40",
+      "data": null
+    },
+    {
+      "test_name": "Error Validation: Missing Metadata",
+      "success": true,
+      "details": "Expected failure: True, Errors: 1",
+      "timestamp": "20:58:40",
+      "data": null
+    },
+    {
+      "test_name": "Retry Test 1",
+      "success": true,
+      "details": "Attempts: 1, Success: True",
+      "timestamp": "20:58:40",
+      "data": null
+    },
+    {
+      "test_name": "Retry Test 2",
+      "success": true,
+      "details": "Attempts: 1, Success: True",
+      "timestamp": "20:58:40",
+      "data": null
+    },
+    {
+      "test_name": "Retry Test 3",
+      "success": true,
+      "details": "Attempts: 1, Success: True",
+      "timestamp": "20:58:40",
+      "data": null
+    },
+    {
+      "test_name": "Workflow Test 1",
+      "success": true,
+      "details": "Success: True, Detection: True (expected: True)",
+      "timestamp": "20:58:40",
+      "data": null
+    },
+    {
+      "test_name": "Workflow Test 2",
+      "success": true,
+      "details": "Success: True, Detection: False (expected: False)",
+      "timestamp": "20:58:45",
+      "data": null
+    },
+    {
+      "test_name": "Workflow Test 3",
+      "success": true,
+      "details": "Success: True, Detection: True (expected: True)",
+      "timestamp": "20:58:45",
+      "data": null
+    },
+    {
+      "test_name": "Performance: Complex Protocol",
+      "success": false,
+      "details": "Success: False, Time: 0.038s, Simulation: 0.038s",
+      "timestamp": "20:58:45",
+      "data": null
+    }
+  ]
+}

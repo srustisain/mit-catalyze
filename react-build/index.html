@@ -4,2512 +4,1565 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Catalyze - AI-Powered Chemistry Assistant</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+        }
+    </script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        :root {
-            /* Light Theme Colors */
-            --bg-primary: #f8fafc;
-            --bg-secondary: #ffffff;
-            --bg-tertiary: #f1f5f9;
-            --text-primary: #1e293b;
-            --text-secondary: #64748b;
-            --text-accent: #3b82f6;
-            --border-color: #e2e8f0;
-            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-            --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
-            --glass: rgba(255, 255, 255, 0.95);
-            --glass-border: rgba(255, 255, 255, 0.3);
-            --primary: #3b82f6;
-            --secondary: #8b5cf6;
-            --accent: #06b6d4;
-            --success: #10b981;
-            --warning: #f59e0b;
-            --error: #ef4444;
+        .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .gradient-text { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        
+        /* Enhanced UI Styles for Scientist-Friendly Interface */
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
         }
-
-        [data-theme="dark"] {
-            /* Dark Theme Colors */
-            --bg-primary: #0f172a;
-            --bg-secondary: #1e293b;
-            --bg-tertiary: #334155;
-            --text-primary: #f1f5f9;
-            --text-secondary: #94a3b8;
-            --text-accent: #60a5fa;
-            --border-color: #475569;
-            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.4);
-            --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.4);
-            --glass: rgba(30, 41, 59, 0.9);
-            --glass-border: rgba(71, 85, 105, 0.4);
-            --primary: #60a5fa;
-            --secondary: #a78bfa;
-            --accent: #22d3ee;
-            --success: #34d399;
-            --warning: #fbbf24;
-            --error: #f87171;
+        
+        .dark .glass-effect {
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+        
+        .smooth-shadow {
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
         }
-
-        body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: var(--bg-primary);
-            color: var(--text-primary);
-            line-height: 1.6;
-            transition: all 0.3s ease;
-            min-height: 100vh;
+        
+        .dark .smooth-shadow {
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
         }
-
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 20px;
+        
+        .hover-lift {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
-
-        /* Enhanced Header with Theme Toggle */
-        .header {
-            text-align: center;
-            margin-bottom: 40px;
-        }
-
-        .header-content {
-            padding: 40px;
-        }
-
-
-
-        .header h1 {
-            font-size: 3.5rem;
-            font-weight: 800;
-            background: linear-gradient(135deg, var(--primary), var(--secondary), var(--accent));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            margin-bottom: 20px;
-            letter-spacing: -0.02em;
-        }
-
-        .header p {
-            font-size: 1.3rem;
-            color: var(--text-secondary);
-            margin-bottom: 30px;
-            font-weight: 500;
-        }
-
-        /* Theme Toggle Button */
-        .theme-toggle {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            background: var(--glass);
-            backdrop-filter: blur(20px);
-            border: 1px solid var(--glass-border);
-            border-radius: 50px;
-            padding: 12px 20px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            font-weight: 600;
-            color: var(--text-primary);
-            box-shadow: var(--shadow);
-        }
-
-        .theme-toggle:hover {
+        
+        .hover-lift:hover {
             transform: translateY(-2px);
-            box-shadow: var(--shadow-lg);
+            box-shadow: 0 10px 25px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
         }
-
-        .theme-icon {
-            font-size: 1.2rem;
-            transition: transform 0.3s ease;
+        
+        .dark .hover-lift:hover {
+            box-shadow: 0 10px 25px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -2px rgba(0, 0, 0, 0.3);
         }
-
-        .theme-toggle:hover .theme-icon {
-            transform: rotate(180deg);
+        
+        .scientist-gradient {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
         }
-
-        /* Auto-save Indicator */
-        .auto-save-indicator {
-            position: fixed;
-            top: 20px;
-            left: 20px;
-            background: var(--glass);
-            backdrop-filter: blur(20px);
-            border: 1px solid var(--glass-border);
-            border-radius: 50px;
-            padding: 8px 16px;
-            font-size: 0.9rem;
-            font-weight: 600;
-            color: var(--success);
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            opacity: 0;
-            transform: translateY(-20px);
+        
+        .capability-card {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border-radius: 16px;
+        }
+        
+        .capability-card:hover {
+            transform: translateY(-4px) scale(1.02);
+            box-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.15);
+        }
+        
+        .dark .capability-card:hover {
+            box-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.4);
+        }
+        
+        .input-focus {
             transition: all 0.3s ease;
-            z-index: 1000;
         }
-
+        
+        .input-focus:focus {
+            transform: scale(1.02);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+        
+        .button-press {
+            transition: all 0.2s ease;
+        }
+        
+        .button-press:active {
+            transform: scale(0.98);
+        }
+        
+        .floating-animation {
+            animation: float 6s ease-in-out infinite;
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+        
+        .pulse-glow {
+            animation: pulse-glow 2s ease-in-out infinite;
+        }
+        
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 0 5px rgba(59, 130, 246, 0.3); }
+            50% { box-shadow: 0 0 20px rgba(59, 130, 246, 0.6); }
+        }
+        
+        .chat-message {
+            animation: slideIn 0.3s ease-out;
+        }
+        
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .mode-btn.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+            color: white;
+        }
+        
+        .mode-btn:hover {
+            background-color: #e5e7eb;
+        }
+        
+        .dark .mode-btn:hover {
+            background-color: #374151;
+        }
+        
+        .dark .mode-btn.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+            color: white;
+        }
+        
+        .tab-btn.active {
+            background: transparent;
+            color: white;
+            border-bottom-color: white !important;
+        }
+        
+        .tab-btn:hover {
+            background-color: transparent;
+            color: white;
+        }
+        
+        .dark .tab-btn:hover {
+            background-color: transparent;
+            color: white;
+        }
+        
+        .dark .tab-btn.active {
+            background: transparent;
+            color: white;
+            border-bottom-color: white !important;
+        }
+        
+        .auto-save-indicator {
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
         .auto-save-indicator.show {
             opacity: 1;
-            transform: translateY(0);
         }
-
-        .auto-save-indicator.saving {
-            color: var(--warning);
+        
+        .chat-history-item {
+            transition: all 0.2s ease;
         }
-
-        .auto-save-indicator.error {
-            color: var(--error);
+        
+        .chat-history-item:hover {
+            background-color: #f3f4f6;
         }
-
-        /* Enhanced Chat Interface */
-        .chat-container {
-            background: var(--glass);
-            backdrop-filter: blur(20px);
-            border-radius: 30px;
-            border: 1px solid var(--glass-border);
-            box-shadow: var(--shadow-lg);
-            overflow: hidden;
-            margin-bottom: 30px;
+        
+        .dark .chat-history-item:hover {
+            background-color: #374151;
         }
-
-        .chat-header {
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-            color: white;
-            padding: 20px 30px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-
-        .chat-header h2 {
-            font-size: 1.5rem;
-            font-weight: 700;
-        }
-
-        .chat-stats {
-            display: flex;
-            gap: 20px;
-            font-size: 0.9rem;
-            opacity: 0.9;
-        }
-
-        .chat-messages {
-            max-height: 400px;
-            overflow-y: auto;
-            padding: 20px;
-        }
-
-        .message {
-            margin-bottom: 20px;
-            padding: 15px 20px;
-            border-radius: 20px;
-            max-width: 80%;
-            animation: slideIn 0.3s ease;
-        }
-
-        @keyframes slideIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .message.user {
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-            color: white;
-            margin-left: auto;
-            border-bottom-right-radius: 5px;
-        }
-
-        .message.assistant {
-            background: var(--bg-tertiary);
-            color: var(--text-primary);
-            border-bottom-left-radius: 5px;
-        }
-
-        .chat-input-container {
-            padding: 20px;
-            border-top: 1px solid var(--border-color);
-            background: var(--bg-secondary);
-        }
-
-        .chat-input-wrapper {
-            display: flex;
-            gap: 15px;
-            align-items: center;
-        }
-
-        .chat-input {
-            flex: 1;
-            padding: 15px 20px;
-            border: 2px solid var(--border-color);
-            border-radius: 25px;
-            font-size: 1rem;
-            background: var(--bg-primary);
-            color: var(--text-primary);
-            transition: all 0.3s ease;
-        }
-
-        .chat-input:focus {
-            outline: none;
-            border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-        }
-
-        .send-button {
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-            color: white;
-            border: none;
-            padding: 15px 25px;
-            border-radius: 25px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .send-button:hover {
-            transform: translateY(-2px);
-            box-shadow: var(--shadow-lg);
-        }
-
-        .send-button:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        /* Enhanced Tab System */
-        .tabs-container {
-            background: var(--glass);
-            backdrop-filter: blur(20px);
-            border-radius: 30px;
-            border: 1px solid var(--glass-border);
-            box-shadow: var(--shadow-lg);
-            overflow: hidden;
-            margin-bottom: 30px;
-        }
-
-        .tabs-header {
-            background: var(--bg-secondary);
-            padding: 20px 30px;
-            border-bottom: 1px solid var(--border-color);
-        }
-
-        .tabs-nav {
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-        }
-
-        .tab-button {
-            background: transparent;
-            border: 2px solid var(--border-color);
-            color: var(--text-secondary);
-            padding: 12px 24px;
-            border-radius: 25px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            font-weight: 600;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .tab-button::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-            transition: left 0.3s ease;
-            z-index: -1;
-        }
-
-        .tab-button:hover::before {
-            left: 0;
-        }
-
-        .tab-button:hover {
-            color: white;
-            border-color: var(--primary);
-            transform: translateY(-2px);
-        }
-
-        .tab-button.active {
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-            color: white;
-            border-color: var(--primary);
-            transform: translateY(-2px);
-            box-shadow: var(--shadow);
-        }
-
-        .tab-button.active::before {
-            left: 0;
-        }
-
-        /* Tab Content with Enhanced Animations */
-        .tab-content {
-            display: none;
-            padding: 30px;
-            animation: fadeIn 0.5s ease;
-        }
-
-        .tab-content.active {
-            display: block;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        /* Export Options */
-        .export-options {
-            display: flex;
-            gap: 15px;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
-        }
-
-        .export-button {
-            background: var(--glass);
-            backdrop-filter: blur(20px);
-            border: 1px solid var(--glass-border);
-            color: var(--text-primary);
-            padding: 10px 20px;
-            border-radius: 20px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .export-button:hover {
-            background: var(--primary);
-            color: white;
-            transform: translateY(-2px);
-            box-shadow: var(--shadow);
-        }
-
-        /* Gamification Elements */
-        .gamification-panel {
-            background: var(--bg-secondary);
-            border-radius: 30px;
-            border: 1px solid var(--border-color);
-            padding: 30px;
-            margin-bottom: 30px;
-            box-shadow: var(--shadow-lg);
-        }
-
-        .gamification-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 20px;
-        }
-
-        .gamification-header h3 {
-            font-size: 1.5rem;
-            font-weight: 700;
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        .user-level {
-            background: linear-gradient(135deg, var(--success), var(--accent));
-            color: white;
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-weight: 600;
-            font-size: 0.9rem;
-        }
-
-        .badges-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
-            margin-bottom: 20px;
-        }
-
-        .badge {
-            background: var(--bg-secondary);
-            border: 2px solid var(--border-color);
-            border-radius: 20px;
-            padding: 20px;
-            text-align: center;
-            transition: all 0.3s ease;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .badge::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 4px;
-            background: linear-gradient(90deg, var(--primary), var(--secondary), var(--accent));
-            transform: scaleX(0);
-            transition: transform 0.3s ease;
-        }
-
-        .badge.earned::before {
-            transform: scaleX(1);
-        }
-
-        .badge.earned {
-            border-color: var(--success);
-            background: linear-gradient(135deg, var(--success), var(--accent));
-            color: white;
-            transform: translateY(-5px);
-            box-shadow: var(--shadow-lg);
-        }
-
-        .badge-icon {
-            font-size: 2rem;
-            margin-bottom: 10px;
-            display: block;
-        }
-
-        .badge-title {
-            font-weight: 600;
-            margin-bottom: 5px;
-        }
-
-        .badge-description {
-            font-size: 0.9rem;
-            opacity: 0.8;
-        }
-
-        .progress-bar {
-            background: var(--bg-tertiary);
-            border-radius: 10px;
-            height: 8px;
-            overflow: hidden;
-            margin-bottom: 10px;
-        }
-
-        .progress-fill {
-            background: linear-gradient(90deg, var(--primary), var(--secondary));
-            height: 100%;
-            border-radius: 10px;
-            transition: width 0.3s ease;
-        }
-
-        /* Demo Queries */
-        .demo-queries {
-            background: var(--glass);
-            backdrop-filter: blur(20px);
-            border-radius: 30px;
-            border: 1px solid var(--glass-border);
-            padding: 30px;
-            margin-bottom: 30px;
-            box-shadow: var(--shadow-lg);
-        }
-
-        .demo-queries h3 {
-            font-size: 1.5rem;
-            font-weight: 700;
-            margin-bottom: 20px;
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        .demo-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 20px;
-        }
-
-        .demo-query {
-            background: var(--bg-secondary);
-            border: 2px solid var(--border-color);
-            border-radius: 20px;
-            padding: 20px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .demo-query::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-            opacity: 0.1;
-            transition: left 0.3s ease;
-        }
-
-        .demo-query:hover::before {
-            left: 0;
-        }
-
-        .demo-query:hover {
-            border-color: var(--primary);
-            transform: translateY(-5px);
-            box-shadow: var(--shadow-lg);
-        }
-
-        .demo-query h4 {
-            font-weight: 600;
-            margin-bottom: 10px;
-            color: var(--text-primary);
-        }
-
-        .demo-query p {
-            color: var(--text-secondary);
-            font-size: 0.9rem;
-        }
-
-        /* Creative Footer */
-        .footer {
-            margin-top: 50px;
-            text-align: center;
-            padding: 30px 20px;
-            background: var(--glass);
-            backdrop-filter: blur(20px);
-            border-radius: 30px;
-            border: 1px solid var(--glass-border);
-            box-shadow: var(--shadow-lg);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .footer::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 2px;
-            background: linear-gradient(90deg, var(--primary), var(--secondary), var(--accent), var(--success));
-            border-radius: 30px 30px 0 0;
-        }
-
-        .footer-content {
-            position: relative;
-            z-index: 1;
-        }
-
-        .footer h3 {
-            font-size: 1.8rem;
-            font-weight: 700;
-            background: linear-gradient(135deg, var(--primary), var(--secondary), var(--accent));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            margin-bottom: 15px;
-            letter-spacing: -0.02em;
-        }
-
-        .footer .hackathon-info {
-            font-size: 1.1rem;
-            color: var(--accent);
-            font-weight: 600;
-            margin-bottom: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-        }
-
-        .footer .team-names {
-            font-size: 1.2rem;
-            color: var(--text-secondary);
-            font-weight: 500;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 15px;
-            flex-wrap: wrap;
-        }
-
-        .footer .separator {
-            color: var(--secondary);
-            font-weight: 300;
-        }
-
-        /* Responsive Design */
-        @media (max-width: 768px) {
-            .container {
-                padding: 15px;
-            }
-
-            .header h1 {
-                font-size: 2.5rem;
-            }
-
-            .header p {
-                font-size: 1.1rem;
-            }
-
-            .tabs-nav {
-                flex-direction: column;
-            }
-
-            .tab-button {
-                width: 100%;
-                text-align: center;
-            }
-
-            .demo-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .badges-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .export-options {
-                flex-direction: column;
-            }
-
-            .export-button {
-                width: 100%;
-                justify-content: center;
-            }
-        }
-
-        /* Loading States */
-        .loading {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 3px solid var(--border-color);
-            border-radius: 50%;
-            border-top-color: var(--primary);
-            animation: spin 1s ease-in-out infinite;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
-        /* Success/Error States */
-        .success-message {
-            background: var(--success);
-            color: white;
-            padding: 15px 20px;
-            border-radius: 20px;
-            margin: 10px 0;
-            animation: slideIn 0.3s ease;
-        }
-
-        .error-message {
-            background: var(--error);
-            color: white;
-            padding: 15px 20px;
-            border-radius: 20px;
-            margin: 10px 0;
-            animation: slideIn 0.3s ease;
-        }
-
-        /* Calculator Styles */
-        .calculator-container {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 30px;
-            margin-top: 20px;
-        }
-
-        .calculator-section {
-            background: var(--bg-secondary);
-            border: 1px solid var(--border-color);
-            border-radius: 20px;
-            padding: 25px;
-            box-shadow: var(--shadow);
-        }
-
-        .calculator-section h4 {
-            color: var(--primary);
-            margin-bottom: 20px;
-            font-size: 1.2rem;
-            font-weight: 600;
-        }
-
-        .calc-input-group {
-            margin-bottom: 15px;
-        }
-
-        .calc-input-group label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: 500;
-            color: var(--text-primary);
-        }
-
-        .calc-input-group input {
-            width: 100%;
-            padding: 12px 15px;
-            border: 2px solid var(--border-color);
-            border-radius: 10px;
-            font-size: 1rem;
-            background: var(--bg-primary);
-            color: var(--text-primary);
-            transition: border-color 0.3s ease;
-        }
-
-        .calc-input-group input:focus {
-            outline: none;
-            border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-        }
-
-        .calc-button {
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-            color: white;
-            border: none;
-            padding: 12px 25px;
-            border-radius: 10px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            width: 100%;
-            margin-top: 10px;
-        }
-
-        .calc-button:hover {
-            transform: translateY(-2px);
-            box-shadow: var(--shadow-lg);
-        }
-
-        .calc-result {
-            margin-top: 15px;
-            padding: 15px;
-            background: var(--success);
-            color: white;
-            border-radius: 10px;
-            font-weight: 600;
-            text-align: center;
-            display: none;
-        }
-
-        .calc-result.show {
-            display: block;
-            animation: slideIn 0.3s ease;
-        }
-
-        /* Notes Styles */
-        .notes-container {
-            margin-top: 20px;
-        }
-
-        .notes-toolbar {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 15px;
-            padding: 15px;
-            background: var(--bg-secondary);
-            border-radius: 15px;
-            border: 1px solid var(--border-color);
-        }
-
-        .notes-btn {
-            background: var(--bg-primary);
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            padding: 8px 12px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            font-weight: 600;
-            color: var(--text-primary);
-        }
-
-        .notes-btn:hover {
-            background: var(--primary);
-            color: white;
-            transform: translateY(-1px);
-        }
-
-        .notes-editor {
-            min-height: 400px;
-            padding: 20px;
-            border: 2px solid var(--border-color);
-            border-radius: 15px;
-            background: var(--bg-primary);
-            color: var(--text-primary);
-            font-size: 1rem;
-            line-height: 1.6;
-            outline: none;
-            transition: border-color 0.3s ease;
-        }
-
-        .notes-editor:focus {
-            border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-        }
-
-        .notes-editor p {
-            margin-bottom: 10px;
-        }
-
-        .notes-editor ul, .notes-editor ol {
-            margin-left: 20px;
-            margin-bottom: 10px;
-        }
-
-        .notes-status {
-            text-align: right;
-            margin-top: 10px;
-            font-size: 0.9rem;
-            color: var(--text-secondary);
-            font-style: italic;
-        }
-
-        /* Data Visualizer Styles */
-        .visualizer-container {
-            margin-top: 20px;
-        }
-
-        .visualizer-controls {
-            display: flex;
-            gap: 20px;
-            margin-bottom: 25px;
-            padding: 20px;
-            background: var(--bg-secondary);
-            border-radius: 15px;
-            border: 1px solid var(--border-color);
-            flex-wrap: wrap;
-        }
-
-        .control-group {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            min-width: 150px;
-        }
-
-        .control-group label {
-            font-weight: 600;
-            color: var(--text-primary);
-            font-size: 0.9rem;
-        }
-
-        .control-group select {
-            padding: 10px 12px;
-            border: 2px solid var(--border-color);
-            border-radius: 8px;
-            background: var(--bg-primary);
-            color: var(--text-primary);
-            font-size: 0.9rem;
-            transition: border-color 0.3s ease;
-        }
-
-        .control-group select:focus {
-            outline: none;
-            border-color: var(--primary);
-        }
-
-        .viz-button {
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 8px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            font-size: 0.9rem;
-        }
-
-        .viz-button:hover {
-            transform: translateY(-2px);
-            box-shadow: var(--shadow-lg);
-        }
-
-        .data-input-section {
-            background: var(--bg-secondary);
-            border: 1px solid var(--border-color);
-            border-radius: 15px;
-            padding: 25px;
-            margin-bottom: 25px;
-        }
-
-        .data-input-section h4 {
-            color: var(--primary);
-            margin-bottom: 20px;
-            font-size: 1.1rem;
-        }
-
-        .data-form {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
-
-        .form-row {
-            display: flex;
-            flex-direction: column;
-            gap: 5px;
-        }
-
-        .form-row label {
-            font-weight: 500;
-            color: var(--text-primary);
-        }
-
-        .form-row input, .form-row textarea {
-            padding: 12px 15px;
-            border: 2px solid var(--border-color);
-            border-radius: 8px;
-            background: var(--bg-primary);
-            color: var(--text-primary);
-            font-size: 1rem;
-            transition: border-color 0.3s ease;
-        }
-
-        .form-row input:focus, .form-row textarea:focus {
-            outline: none;
-            border-color: var(--primary);
-        }
-
-        .form-row textarea {
-            resize: vertical;
-            min-height: 80px;
-        }
-
-        .csv-upload {
-            text-align: center;
-            padding: 20px;
-        }
-
-        .csv-upload input[type="file"] {
-            margin-bottom: 15px;
-            padding: 10px;
-            border: 2px dashed var(--border-color);
-            border-radius: 8px;
-            background: var(--bg-primary);
-            cursor: pointer;
-        }
-
-        .demo-buttons {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-        }
-
-        .demo-btn {
-            background: var(--bg-primary);
-            border: 2px solid var(--primary);
-            color: var(--primary);
-            padding: 15px 20px;
-            border-radius: 10px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .demo-btn:hover {
-            background: var(--primary);
-            color: white;
-            transform: translateY(-2px);
-        }
-
-        .chart-container {
-            background: var(--bg-secondary);
-            border: 1px solid var(--border-color);
-            border-radius: 15px;
-            padding: 25px;
-            text-align: center;
-            margin-top: 20px;
-        }
-
-        #dataChart {
-            max-width: 100%;
-            height: auto;
-        }
-
-        /* Reaction Flow Diagram Styles */
-        .reaction-flow-container {
-            margin-top: 20px;
-        }
-
-        .reaction-builder {
-            background: var(--bg-secondary);
-            border: 1px solid var(--border-color);
-            border-radius: 15px;
-            padding: 25px;
-            margin-bottom: 25px;
-        }
-
-        .reaction-builder h4 {
-            color: var(--primary);
-            margin-bottom: 20px;
-            font-size: 1.1rem;
-        }
-
-        .reaction-inputs {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-
-        .reaction-input {
-            display: flex;
-            flex-direction: column;
-            gap: 5px;
-        }
-
-        .reaction-input label {
-            font-weight: 500;
-            color: var(--text-primary);
-            font-size: 0.9rem;
-        }
-
-        .reaction-input input, .reaction-input select {
-            padding: 10px 12px;
-            border: 2px solid var(--border-color);
-            border-radius: 8px;
-            background: var(--bg-primary);
-            color: var(--text-primary);
-            font-size: 0.9rem;
-            transition: border-color 0.3s ease;
-        }
-
-        .reaction-input input:focus, .reaction-input select:focus {
-            outline: none;
-            border-color: var(--primary);
-        }
-
-        .reaction-diagram {
-            background: var(--bg-secondary);
-            border: 1px solid var(--border-color);
-            border-radius: 15px;
-            padding: 30px;
-            text-align: center;
-            min-height: 300px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .reaction-equation {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 20px;
-            flex-wrap: wrap;
-            font-size: 1.2rem;
-            font-weight: 600;
-        }
-
-        .reactant, .product, .reagent, .solvent {
-            padding: 15px 20px;
-            border-radius: 12px;
-            border: 2px solid;
-            transition: all 0.3s ease;
-            cursor: pointer;
-            position: relative;
-        }
-
-        .reactant {
-            background: linear-gradient(135deg, #10b981, #34d399);
-            color: white;
-            border-color: #10b981;
-        }
-
-        .product {
-            background: linear-gradient(135deg, #3b82f6, #60a5fa);
-            color: white;
+        
+        .chat-history-item.active {
+            background-color: #dbeafe;
             border-color: #3b82f6;
         }
-
-        .reagent {
-            background: linear-gradient(135deg, #f59e0b, #fbbf24);
-            color: white;
-            border-color: #f59e0b;
+        
+        .dark .chat-history-item.active {
+            background-color: #1e3a8a;
+            border-color: #60a5fa;
         }
-
-        .solvent {
-            background: linear-gradient(135deg, #8b5cf6, #a78bfa);
-            color: white;
-            border-color: #8b5cf6;
-        }
-
-        .reactant:hover, .product:hover, .reagent:hover, .solvent:hover {
-            transform: scale(1.05);
-            box-shadow: var(--shadow-lg);
-        }
-
-        .reaction-arrow {
-            font-size: 2rem;
-            color: var(--primary);
+        
+        .delete-chat-btn {
+            opacity: 1;
+            transition: all 0.2s ease;
+            padding: 4px 8px;
+            border-radius: 6px;
+            background-color: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            cursor: pointer;
+            font-size: 14px;
             font-weight: bold;
-            animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.6; }
-        }
-
-        .reaction-info {
-            position: absolute;
-            bottom: 10px;
-            left: 10px;
-            right: 10px;
-            background: var(--glass);
-            backdrop-filter: blur(10px);
-            border-radius: 8px;
-            padding: 10px;
-            font-size: 0.8rem;
-            color: var(--text-secondary);
-        }
-
-        /* Smart Automation Styles */
-        .automation-container {
-            margin-top: 20px;
-        }
-
-        .automation-controls {
-            background: var(--bg-secondary);
-            border: 1px solid var(--border-color);
-            border-radius: 15px;
-            padding: 25px;
-            margin-bottom: 25px;
-        }
-
-        .automation-controls h4 {
-            color: var(--primary);
-            margin-bottom: 20px;
-            font-size: 1.1rem;
-        }
-
-        .parameter-sliders {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-            margin-bottom: 20px;
-        }
-
-        .slider-group {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
-        .slider-group label {
-            font-weight: 500;
-            color: var(--text-primary);
-            font-size: 0.9rem;
-        }
-
-        .slider-container {
+            color: #dc2626;
+            min-width: 24px;
+            min-height: 24px;
             display: flex;
             align-items: center;
-            gap: 10px;
+            justify-content: center;
         }
-
-        .slider {
-            flex: 1;
-            height: 6px;
-            border-radius: 3px;
-            background: var(--bg-tertiary);
-            outline: none;
-            -webkit-appearance: none;
+        
+        .chat-history-item:hover .delete-chat-btn {
+            background-color: rgba(239, 68, 68, 0.2);
+            border-color: rgba(239, 68, 68, 0.5);
         }
-
-        .slider::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            appearance: none;
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
-            background: var(--primary);
-            cursor: pointer;
-            box-shadow: var(--shadow);
+        
+        .delete-chat-btn:hover {
+            background-color: rgba(239, 68, 68, 0.3);
+            border-color: #dc2626;
+            color: #b91c1c;
+            transform: scale(1.1);
         }
-
-        .slider::-moz-range-thumb {
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
-            background: var(--primary);
-            cursor: pointer;
-            border: none;
-            box-shadow: var(--shadow);
+        
+        /* Dark mode styles */
+        .dark {
+            background-color: #111827 !important;
         }
-
-        .slider-value {
-            min-width: 60px;
-            text-align: center;
-            font-weight: 600;
-            color: var(--primary);
-            background: var(--bg-primary);
-            padding: 5px 10px;
-            border-radius: 6px;
-            border: 1px solid var(--border-color);
+        .dark .bg-white {
+            background-color: #374151 !important;
         }
-
-        .code-editor {
-            background: var(--bg-secondary);
-            border: 1px solid var(--border-color);
-            border-radius: 15px;
-            padding: 25px;
-            margin-bottom: 25px;
+        .dark .bg-gray-50 {
+            background-color: #4b5563 !important;
         }
-
-        .code-editor h4 {
-            color: var(--primary);
-            margin-bottom: 20px;
-            font-size: 1.1rem;
+        .dark .text-gray-900 {
+            color: #f9fafb !important;
         }
-
-        .code-header {
-            display: flex;
-            justify-content: between;
-            align-items: center;
-            margin-bottom: 15px;
-            gap: 15px;
+        .dark .text-gray-600 {
+            color: #d1d5db !important;
         }
-
-        .code-language {
-            background: var(--primary);
-            color: white;
-            padding: 5px 12px;
-            border-radius: 6px;
-            font-size: 0.8rem;
-            font-weight: 600;
+        .dark .text-gray-400 {
+            color: #9ca3af !important;
         }
-
-        .code-actions {
-            display: flex;
-            gap: 10px;
+        .dark .border-gray-200 {
+            border-color: #6b7280 !important;
         }
-
-        .code-action-btn {
-            background: var(--bg-primary);
-            border: 1px solid var(--border-color);
-            color: var(--text-primary);
-            padding: 8px 15px;
-            border-radius: 6px;
-            font-size: 0.8rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .code-action-btn:hover {
-            background: var(--primary);
-            color: white;
-        }
-
-        .code-content {
-            background: #1e293b;
-            color: #e2e8f0;
-            border-radius: 8px;
-            padding: 20px;
-            font-family: 'JetBrains Mono', 'Courier New', monospace;
-            font-size: 0.9rem;
-            line-height: 1.6;
-            overflow-x: auto;
-            white-space: pre-wrap;
-            border: 1px solid #334155;
-        }
-
-        .code-line {
-            margin-bottom: 5px;
-        }
-
-        .code-comment {
-            color: #64748b;
-        }
-
-        .code-keyword {
-            color: #f59e0b;
-        }
-
-        .code-string {
-            color: #10b981;
-        }
-
-        .code-number {
-            color: #3b82f6;
-        }
-
-        .automation-preview {
-            background: var(--bg-secondary);
-            border: 1px solid var(--border-color);
-            border-radius: 15px;
-            padding: 25px;
-        }
-
-        .automation-preview h4 {
-            color: var(--primary);
-            margin-bottom: 20px;
-            font-size: 1.1rem;
-        }
-
-        .preview-stats {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-
-        .stat-card {
-            background: var(--bg-primary);
-            border: 1px solid var(--border-color);
-            border-radius: 10px;
-            padding: 15px;
-            text-align: center;
-        }
-
-        .stat-value {
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: var(--primary);
-            margin-bottom: 5px;
-        }
-
-        .stat-label {
-            font-size: 0.8rem;
-            color: var(--text-secondary);
-            font-weight: 500;
+        .dark .bg-gray-100 {
+            background-color: #4b5563 !important;
         }
     </style>
 </head>
-<body>
-    <!-- Auto-save Indicator -->
-    <div class="auto-save-indicator" id="autoSaveIndicator">
-        <span class="loading" id="autoSaveSpinner"></span>
-        <span id="autoSaveText">Auto-saving...</span>
-    </div>
-
-    <div class="container">
-        <!-- Enhanced Header -->
-        <div class="header">
-            <div class="header-content">
-                <!-- Theme Toggle -->
-                <button class="theme-toggle" id="themeToggle">
-                    <span class="theme-icon">🌙</span>
-                    <span id="themeText">Dark Mode</span>
+<body class="bg-gray-50 dark:bg-gray-900 min-h-screen transition-colors duration-300">
+    <!-- Header -->
+    <header class="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-end items-center py-4">
+                <button id="themeToggle" class="flex items-center space-x-2 px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
+                    <span id="themeText">🌙</span>
+                    <span id="themeLabel" class="text-sm font-medium">Dark Mode</span>
                 </button>
-
-                <h1>Catalyze</h1>
-                <p>AI-Powered Chemistry Assistant for Material Science & Chemistry</p>
             </div>
         </div>
-
-        <!-- Gamification Panel -->
-        <div class="gamification-panel">
-            <div class="gamification-header">
-                <h3>Your Progress</h3>
-                <div class="user-level" id="userLevel">Level 1: Novice Chemist</div>
-            </div>
+    </header>
+    <!-- Main Content -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Catalyze Title Container -->
+        <div class="scientist-gradient rounded-2xl smooth-shadow hover-lift p-6 mb-6 text-center">
+            <h1 class="text-4xl font-bold text-white mb-2 floating-animation">Catalyze</h1>
+            <p class="text-lg text-white/90">AI-Powered Chemistry Assistant for Material Science & Chemistry</p>
+        </div>
+        
+        <!-- Capabilities Section -->
+        <div class="scientist-gradient rounded-2xl smooth-shadow hover-lift p-6 mb-6">
+            <h2 class="text-xl font-semibold text-white mb-6 text-center">What Catalyze Can Do</h2>
             
-            <div class="progress-bar">
-                <div class="progress-fill" id="progressFill" style="width: 25%"></div>
-            </div>
-            <p style="text-align: center; color: var(--text-secondary); font-size: 0.9rem;">
-                Complete 3 more protocols to reach Level 2!
-            </p>
-
-            <div class="badges-grid">
-                <div class="badge earned" id="badge1">
-                    <span class="badge-icon">🧪</span>
-                    <div class="badge-title">First Query</div>
-                    <div class="badge-description">Asked your first chemistry question</div>
+            <!-- Capability Blocks -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <!-- Answer Questions -->
+                <div class="capability-card p-4 bg-white rounded-2xl border border-white/20">
+                    <div class="flex items-center mb-3">
+                        <div class="text-2xl mr-3">❓</div>
+                        <h3 class="text-lg font-semibold text-gray-900">Answer Questions</h3>
+                    </div>
+                    <p class="text-sm text-gray-600">Ask about chemistry concepts, materials science, reactions, and get detailed explanations</p>
                 </div>
-                <div class="badge" id="badge2">
-                    <span class="badge-icon">⚗️</span>
-                    <div class="badge-title">Protocol Master</div>
-                    <div class="badge-description">Generated 5 protocols</div>
+                
+                <!-- Generate Experiments -->
+                <div class="capability-card p-4 bg-white rounded-2xl border border-white/20">
+                    <div class="flex items-center mb-3">
+                        <div class="text-2xl mr-3">🧪</div>
+                        <h3 class="text-lg font-semibold text-gray-900">Generate Experiments</h3>
+                    </div>
+                    <p class="text-sm text-gray-600">Design custom experiments with step-by-step procedures and safety guidelines</p>
                 </div>
-                <div class="badge" id="badge3">
-                    <span class="badge-icon">🤖</span>
-                    <div class="badge-title">Automation Expert</div>
-                    <div class="badge-description">Created 3 automation scripts</div>
+                
+                <!-- Generate Protocols -->
+                <div class="capability-card p-4 bg-white rounded-2xl border border-white/20">
+                    <div class="flex items-center mb-3">
+                        <div class="text-2xl mr-3">📋</div>
+                        <h3 class="text-lg font-semibold text-gray-900">Generate Protocols</h3>
+                    </div>
+                    <p class="text-sm text-gray-600">Create detailed lab protocols with materials, procedures, and safety measures</p>
                 </div>
-                <div class="badge" id="badge4">
-                    <span class="badge-icon">🔬</span>
-                    <div class="badge-title">Safety Champion</div>
-                    <div class="badge-description">Reviewed 10 safety protocols</div>
+                
+                <!-- Automation -->
+                <div class="capability-card p-4 bg-white rounded-2xl border border-white/20">
+                    <div class="flex items-center mb-3">
+                        <div class="text-2xl mr-3">🤖</div>
+                        <h3 class="text-lg font-semibold text-gray-900">Lab Automation</h3>
+                    </div>
+                    <p class="text-sm text-gray-600">Generate Python scripts for Opentrons, PyHamilton, and other automation platforms</p>
+                </div>
+                
+                <!-- Data Analysis -->
+                <div class="capability-card p-4 bg-white rounded-2xl border border-white/20">
+                    <div class="flex items-center mb-3">
+                        <div class="text-2xl mr-3">📊</div>
+                        <h3 class="text-lg font-semibold text-gray-900">Data Analysis</h3>
+                    </div>
+                    <p class="text-sm text-gray-600">Visualize data with charts, graphs, and statistical analysis tools</p>
+                </div>
+                
+                <!-- Export Data -->
+                <div class="capability-card p-4 bg-white rounded-2xl border border-white/20">
+                    <div class="flex items-center mb-3">
+                        <div class="text-2xl mr-3">📤</div>
+                        <h3 class="text-lg font-semibold text-gray-900">Export Data</h3>
+                    </div>
+                    <p class="text-sm text-gray-600">Export results, protocols, and data in multiple formats (PDF, CSV, JSON)</p>
                 </div>
             </div>
         </div>
+        <!-- Chat Interface -->
+        <div class="bg-white dark:bg-gray-800 rounded-2xl smooth-shadow hover-lift border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <!-- Chat Header -->
+            <div class="scientist-gradient px-6 py-4">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-lg font-semibold text-white">Ask Your Chemistry Question</h2>
+                    <div class="flex space-x-4 text-sm text-white">
+                        <span class="bg-white/20 px-3 py-1 rounded-full">Queries: <span id="queryCount" class="font-bold">0</span></span>
+                        <span class="bg-white/20 px-3 py-1 rounded-full">Protocols: <span id="protocolCount" class="font-bold">0</span></span>
+                        <span class="bg-white/20 px-3 py-1 rounded-full">Scripts: <span id="scriptCount" class="font-bold">0</span></span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Chat Content - Two Divisions in One Box -->
+            <div class="flex">
+                <!-- Left Side - Chat Management -->
+                <div class="w-80 border-r border-gray-200 dark:border-gray-700 p-4">
+                    <div class="mb-4">
+                        <button id="newChatBtn" class="w-full scientist-gradient text-white py-3 rounded-lg font-medium hover:opacity-90 transition-all button-press pulse-glow">
+                            + New Chat
+                        </button>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-3">Recent Chats</h3>
+                        <div id="chatHistory" class="space-y-2">
+                            <!-- Chat history items will be populated here -->
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Right Side - Main Chat Area -->
+                <div class="flex-1">
 
-        <!-- Enhanced Chat Interface -->
-        <div class="chat-container">
-            <div class="chat-header">
-                <h2>Ask Your Chemistry Question</h2>
-                <div class="chat-stats">
-                    <span>Queries: <span id="queryCount">0</span></span>
-                    <span>Protocols: <span id="protocolCount">0</span></span>
-                    <span>Scripts: <span id="scriptCount">0</span></span>
+
+            <!-- Chat Messages -->
+            <div id="chatMessages" class="p-6 min-h-96">
+                <div class="text-center">
+                    <div class="text-4xl mb-4 floating-animation">👋</div>
+                    <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-2">Hello! I'm Catalyze</h3>
+                    <p class="text-gray-600 dark:text-gray-400 mb-4">Your AI chemistry assistant. I can help you with research questions, protocol generation, lab automation, and safety analysis.</p>
+                    <p class="text-gray-600 dark:text-gray-400">What would you like to explore today?</p>
                 </div>
             </div>
-            
-            <div class="chat-messages" id="chatMessages">
-                <div class="message assistant">
-                    <strong>Catalyze:</strong> Welcome! I'm your AI chemistry assistant. Ask me about materials, reactions, protocols, or lab automation. What would you like to explore today?
+
+            <!-- PDF Upload Area -->
+            <div id="pdfUploadArea" class="px-6 py-4 border-t border-gray-200 dark:border-gray-700" style="display: none;">
+                <div class="bg-blue-50 dark:bg-blue-900/20 border-2 border-dashed border-blue-300 dark:border-blue-600 rounded-lg p-6 text-center">
+                    <div class="text-4xl mb-2">📄</div>
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">Upload Scientific PDF</h3>
+                    <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">Drag and drop your PDF here or click to browse</p>
+                    <input type="file" id="pdfFileInput" accept=".pdf" class="hidden">
+                    <button onclick="document.getElementById('pdfFileInput').click()" class="scientist-gradient text-white px-6 py-2 rounded-lg font-medium hover:opacity-90 transition-all button-press">
+                        Choose PDF File
+                    </button>
+                    <div id="pdfUploadProgress" class="mt-4 hidden">
+                        <div class="bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                            <div id="pdfProgressBar" class="bg-blue-600 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
+                        </div>
+                        <p id="pdfUploadStatus" class="text-sm text-gray-600 dark:text-gray-400 mt-2">Uploading...</p>
+                    </div>
+                    <div id="pdfUploadSuccess" class="mt-4 hidden text-green-600 dark:text-green-400">
+                        ✅ PDF uploaded successfully! You can now ask questions about it.
+                    </div>
+                    <div id="pdfUploadError" class="mt-4 hidden text-red-600 dark:text-red-400">
+                        ❌ Upload failed. Please try again.
+                    </div>
                 </div>
-            </div>
-            
-            <div class="chat-input-container">
-                <div class="chat-input-wrapper">
-                    <input type="text" class="chat-input" id="chatInput" placeholder="Ask about chemistry, materials, or lab protocols...">
-                    <button class="send-button" id="sendButton">
-                        <span>Send</span>
-                        <span>🚀</span>
+                <div class="flex justify-between items-center mt-4">
+                    <button onclick="togglePdfUpload()" class="text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 text-sm">
+                        ← Back to chat
+                    </button>
+                    <button onclick="clearPdfContext()" class="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-200 text-sm">
+                        Clear PDF context
                     </button>
                 </div>
             </div>
-        </div>
 
-        <!-- Demo Queries -->
-        <div class="demo-queries">
-            <h3>Try These Demo Queries</h3>
-            <div class="demo-grid">
-                <div class="demo-query" data-query="What are the properties of benzyl alcohol?">
-                    <h4>Chemical Properties</h4>
-                    <p>Explore molecular properties, safety data, and applications</p>
+            <!-- Chat Input -->
+            <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-700">
+                <div class="flex space-x-4">
+                    <input type="text" id="chatInput" placeholder="Ask about chemistry, materials, or lab protocols..." 
+                           class="input-focus flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400">
+                    
+                    <!-- Simple Chat Buttons -->
+                    <div class="flex space-x-4">
+                        <button onclick="togglePdfUpload()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-lg font-medium hover:opacity-90 transition-all button-press flex items-center space-x-2" title="Upload PDF">
+                            <span>📄</span>
+                        </button>
+                        <button id="sendButton" class="scientist-gradient text-white px-6 py-3 rounded-lg font-medium hover:opacity-90 transition-all button-press flex items-center space-x-2">
+                            <span>Send</span>
+                            <span>✈️</span>
+                        </button>
+                    </div>
                 </div>
-                <div class="demo-query" data-query="How to synthesize benzyl alcohol from benzyl chloride?">
-                    <h4>Protocol Generation</h4>
-                    <p>Get step-by-step synthesis procedures with safety notes</p>
-                </div>
-                <div class="demo-query" data-query="Generate Opentrons script for pipetting 100μL">
-                    <h4>Lab Automation</h4>
-                    <p>Create robot-ready automation scripts</p>
-                </div>
-                <div class="demo-query" data-query="What are the safety hazards of sodium hydroxide?">
-                    <h4>Safety Analysis</h4>
-                    <p>Comprehensive safety information and handling procedures</p>
                 </div>
             </div>
         </div>
 
-        <!-- Enhanced Tab System -->
-        <div class="tabs-container">
-            <div class="tabs-header">
-                <div class="tabs-nav">
-                    <button class="tab-button active" data-tab="summary">📊 Summary</button>
-                    <button class="tab-button" data-tab="protocol">⚗️ Protocol</button>
-                    <button class="tab-button" data-tab="safety">🛡️ Safety</button>
-                    <button class="tab-button" data-tab="calculator">🧮 Calculator</button>
-                    <button class="tab-button" data-tab="notes">📝 Notes</button>
-                    <button class="tab-button" data-tab="visualizer">📈 Data Visualizer</button>
-                    <button class="tab-button" data-tab="reaction-flow">⚡ Reaction Flow</button>
-                    <button class="tab-button" data-tab="smart-automation">🤖 Smart Automation</button>
-                    <button class="tab-button" data-tab="3d-molecule">🧬 3D Molecule</button>
-                    <button class="tab-button" data-tab="knowledge-graph">🕸️ Knowledge Graph</button>
+        <!-- Results Tabs -->
+        <div class="mt-12 bg-white dark:bg-gray-800 rounded-2xl smooth-shadow hover-lift border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <div class="scientist-gradient">
+                <nav class="flex space-x-8 px-6">
+                    <button class="tab-btn py-4 px-1 border-b-4 border-white text-white font-medium transition-all button-press" data-tab="notes">📝 Notes</button>
+                    <button class="tab-btn py-4 px-1 border-b-4 border-transparent text-white/80 hover:text-white font-medium transition-all button-press" data-tab="data-visualizer">📊 Data Visualizer</button>
+                    <button class="tab-btn py-4 px-1 border-b-4 border-transparent text-white/80 hover:text-white font-medium transition-all button-press" data-tab="export">📤 Export</button>
+                </nav>
+            </div>
+
+            <!-- Notes Tab -->
+            <div id="notes" class="tab-content active p-6">
+                <h3 class="text-2xl font-semibold text-gray-900 dark:text-white mb-6">Lab Notes</h3>
+                <div class="capability-card bg-gray-50 dark:bg-gray-700 rounded-lg p-6">
+                    <textarea id="notesTextarea" rows="12" placeholder="Write your lab notes here..." 
+                              class="input-focus w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 resize-none"></textarea>
+                    <div class="flex space-x-4 mt-4">
+                        <button onclick="saveNotes()" class="scientist-gradient text-white px-4 py-2 rounded-lg font-medium hover:opacity-90 transition-all button-press">Save Notes</button>
+                        <button onclick="clearNotes()" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg font-medium transition-all button-press">Clear</button>
+                    </div>
+                    <div id="autoSaveIndicator" class="auto-save-indicator mt-2 text-sm text-green-600 dark:text-green-400">Auto-saved!</div>
                 </div>
             </div>
 
-            <!-- Export Options -->
-            <div class="export-options">
-                <button class="export-button" id="exportPDF">
-                    <span>📄</span>
-                    <span>Export PDF</span>
-                </button>
-                <button class="export-button" id="exportMarkdown">
-                    <span>📝</span>
-                    <span>Export Markdown</span>
-                </button>
-                <button class="export-button" id="exportWord">
-                    <span>📄</span>
-                    <span>Export Word</span>
-                </button>
-                <button class="export-button" id="exportJSON">
-                    <span>🔧</span>
-                    <span>Export JSON</span>
-                </button>
-            </div>
+            <!-- Data Visualizer Tab -->
+            <div id="data-visualizer" class="tab-content p-6">
+                <h3 class="text-2xl font-semibold text-gray-900 dark:text-white mb-6">Data Visualizer</h3>
+                
+                <!-- Chart Type Selection -->
+                <div class="capability-card bg-gray-50 dark:bg-gray-700 rounded-lg p-4 mb-6">
+                    <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-3">Chart Type</h4>
+                    <div class="flex space-x-3">
+                        <button onclick="selectChartType('scatter')" class="chart-type-btn px-3 py-2 rounded-lg font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 transition-all button-press">Scatter Plot</button>
+                        <button onclick="selectChartType('bar')" class="chart-type-btn px-3 py-2 rounded-lg font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-600 transition-all button-press">Bar Chart</button>
+                        <button onclick="selectChartType('pie')" class="chart-type-btn px-3 py-2 rounded-lg font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-600 transition-all button-press">Pie Chart</button>
+                        <button onclick="selectChartType('line')" class="chart-type-btn px-3 py-2 rounded-lg font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-600 transition-all button-press">Line Chart</button>
+                    </div>
+                </div>
 
-            <!-- Tab Contents -->
-            <div class="tab-content active" id="summary">
-                <h3>Query Summary</h3>
-                <p>Your query results will appear here. Ask a question to get started!</p>
-            </div>
-
-            <div class="tab-content" id="protocol">
-                <h3>Protocol Generation</h3>
-                <p>Step-by-step laboratory procedures will be generated here.</p>
-            </div>
-
-
-            <div class="tab-content" id="safety">
-                <h3>Safety Analysis</h3>
-                <p>Safety information, hazards, and handling procedures will appear here.</p>
-            </div>
-
-            <div class="tab-content" id="calculator">
-                <h3>Chemistry Calculator</h3>
-                <div class="calculator-container">
-                    <div class="calculator-section">
-                        <h4>Molarity Calculator</h4>
-                        <div class="calc-input-group">
-                            <label>Mass (g):</label>
-                            <input type="number" id="mass" placeholder="Enter mass in grams" step="0.001">
+                <!-- Data Input -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                    <!-- Manual Data Entry -->
+                    <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                        <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-3">Manual Data Entry</h4>
+                        <div class="space-y-3">
+                            <div class="grid grid-cols-2 gap-3">
+                                <input type="number" id="dataX" placeholder="X value" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white">
+                                <input type="number" id="dataY" placeholder="Y value" class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white">
+                            </div>
+                            <button onclick="addDataPoint()" class="w-full gradient-bg text-white py-2 rounded-lg font-medium">Add Data Point</button>
+                            <button onclick="loadSampleData()" class="w-full bg-green-500 hover:bg-green-600 text-white py-2 rounded-lg font-medium">Load Sample Data</button>
                         </div>
-                        <div class="calc-input-group">
-                            <label>Molecular Weight (g/mol):</label>
-                            <input type="number" id="mw" placeholder="Enter molecular weight" step="0.001">
-                        </div>
-                        <div class="calc-input-group">
-                            <label>Volume (L):</label>
-                            <input type="number" id="volume" placeholder="Enter volume in liters" step="0.001">
-                        </div>
-                        <button class="calc-button" onclick="calculateMolarity()">Calculate Molarity</button>
-                        <div class="calc-result" id="molarityResult"></div>
                     </div>
 
-                    <div class="calculator-section">
-                        <h4>Dilution Calculator</h4>
-                        <div class="calc-input-group">
-                            <label>Initial Concentration (M):</label>
-                            <input type="number" id="c1" placeholder="C₁" step="0.001">
+                    <!-- Current Data -->
+                    <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                        <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-3">Current Data</h4>
+                        <div id="dataTable" class="max-h-32 overflow-y-auto mb-3">
+                            <table class="w-full text-sm">
+                                <thead>
+                                    <tr class="border-b border-gray-300 dark:border-gray-600">
+                                        <th class="text-left py-1 font-medium">X</th>
+                                        <th class="text-left py-1 font-medium">Y</th>
+                                        <th class="text-left py-1 font-medium">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="dataTableBody">
+                                    <!-- Data rows will be added here -->
+                                </tbody>
+                            </table>
                         </div>
-                        <div class="calc-input-group">
-                            <label>Initial Volume (L):</label>
-                            <input type="number" id="v1" placeholder="V₁" step="0.001">
+                        <div class="flex space-x-2">
+                            <button onclick="generateChart()" class="flex-1 gradient-bg text-white py-2 rounded-lg font-medium">Generate Chart</button>
+                            <button onclick="clearAllData()" class="bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-lg font-medium">Clear</button>
                         </div>
-                        <div class="calc-input-group">
-                            <label>Final Concentration (M):</label>
-                            <input type="number" id="c2" placeholder="C₂" step="0.001">
-                        </div>
-                        <button class="calc-button" onclick="calculateDilution()">Calculate Final Volume</button>
-                        <div class="calc-result" id="dilutionResult"></div>
                     </div>
+                </div>
 
-                    <div class="calculator-section">
-                        <h4>Yield Calculator</h4>
-                        <div class="calc-input-group">
-                            <label>Theoretical Yield (g):</label>
-                            <input type="number" id="theoretical" placeholder="Enter theoretical yield" step="0.001">
+                <!-- Chart Display -->
+                <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                    <div class="flex justify-between items-center mb-3">
+                        <h4 class="text-lg font-semibold text-gray-900 dark:text-white">Chart</h4>
+                        <div class="flex space-x-2">
+                            <button onclick="downloadChart()" class="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-lg text-sm font-medium">Download</button>
+                            <button onclick="clearChart()" class="bg-gray-500 hover:bg-gray-600 text-white px-3 py-1 rounded-lg text-sm font-medium">Clear</button>
                         </div>
-                        <div class="calc-input-group">
-                            <label>Actual Yield (g):</label>
-                            <input type="number" id="actual" placeholder="Enter actual yield" step="0.001">
-                        </div>
-                        <button class="calc-button" onclick="calculateYield()">Calculate Yield %</button>
-                        <div class="calc-result" id="yieldResult"></div>
+                    </div>
+                    <div id="chartContainer" class="h-80 flex items-center justify-center text-gray-500 dark:text-gray-400">
+                        <p>Select chart type and add data to generate chart</p>
                     </div>
                 </div>
             </div>
 
-            <div class="tab-content" id="notes">
-                <h3>Research Notes</h3>
-                <div class="notes-container">
-                    <div class="notes-toolbar">
-                        <button class="notes-btn" onclick="formatText('bold')" title="Bold"><strong>B</strong></button>
-                        <button class="notes-btn" onclick="formatText('italic')" title="Italic"><em>I</em></button>
-                        <button class="notes-btn" onclick="formatText('underline')" title="Underline"><u>U</u></button>
-                        <button class="notes-btn" onclick="insertBullet()" title="Bullet List">•</button>
-                        <button class="notes-btn" onclick="insertNumbered()" title="Numbered List">1.</button>
-                        <button class="notes-btn" onclick="clearNotes()" title="Clear All">🗑️</button>
-                        <button class="notes-btn" onclick="exportNotes()" title="Export Notes">📄</button>
-                    </div>
-                    <div class="notes-editor" id="notesEditor" contenteditable="true" placeholder="Start taking notes...">
-                        <p>Welcome to your research notes! Use the toolbar above to format your text.</p>
-                        <p>• Your notes are automatically saved</p>
-                        <p>• Use this space to record observations, calculations, and insights</p>
-                        <p>• Export your notes when ready</p>
-                    </div>
-                    <div class="notes-status" id="notesStatus">Auto-saved</div>
-                </div>
-            </div>
-
-            <div class="tab-content" id="visualizer">
-                <h3>Data Visualizer</h3>
-                <div class="visualizer-container">
-                    <div class="visualizer-controls">
-                        <div class="control-group">
-                            <label for="chartType">Chart Type:</label>
-                            <select id="chartType" onchange="updateChartType()">
-                                <option value="line">Line Chart</option>
-                                <option value="bar">Bar Chart</option>
-                                <option value="scatter">Scatter Plot</option>
-                                <option value="pie">Pie Chart</option>
-                                <option value="doughnut">Doughnut Chart</option>
-                                <option value="radar">Radar Chart</option>
-                            </select>
-                        </div>
-                        <div class="control-group">
-                            <label for="dataInput">Data Input:</label>
-                            <select id="dataInput" onchange="updateDataInput()">
-                                <option value="manual">Manual Entry</option>
-                                <option value="csv">CSV Upload</option>
-                                <option value="demo">Demo Data</option>
-                            </select>
-                        </div>
-                        <div class="control-group">
-                            <button class="viz-button" onclick="generateChart()">Generate Chart</button>
-                            <button class="viz-button" onclick="exportChart()">Export Chart</button>
-                            <button class="viz-button" onclick="clearChart()">Clear Chart</button>
+            <!-- Export Tab -->
+            <div id="export" class="tab-content p-6">
+                <h3 class="text-2xl font-semibold text-gray-900 dark:text-white mb-6">Export Options</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="capability-card bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                        <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-3">Export Data</h4>
+                        <div class="space-y-2">
+                            <button onclick="exportToCSV()" class="w-full bg-green-500 hover:bg-green-600 text-white py-2 rounded-lg font-medium transition-all button-press">Export to CSV</button>
+                            <button onclick="exportToJSON()" class="w-full bg-blue-500 hover:bg-blue-600 text-white py-2 rounded-lg font-medium transition-all button-press">Export to JSON</button>
+                            <button onclick="exportToPDF()" class="w-full bg-red-500 hover:bg-red-600 text-white py-2 rounded-lg font-medium transition-all button-press">Export to PDF</button>
                         </div>
                     </div>
-
-                    <div class="data-input-section" id="manualInput">
-                        <h4>Manual Data Entry</h4>
-                        <div class="data-form">
-                            <div class="form-row">
-                                <label>Chart Title:</label>
-                                <input type="text" id="chartTitle" placeholder="Enter chart title" value="Scientific Data Analysis">
-                            </div>
-                            <div class="form-row">
-                                <label>X-Axis Label:</label>
-                                <input type="text" id="xAxisLabel" placeholder="X-axis label" value="Time (min)">
-                            </div>
-                            <div class="form-row">
-                                <label>Y-Axis Label:</label>
-                                <input type="text" id="yAxisLabel" placeholder="Y-axis label" value="Concentration (M)">
-                            </div>
-                            <div class="form-row">
-                                <label>Data Points (comma-separated):</label>
-                                <textarea id="dataPoints" placeholder="Enter data points: x1,y1;x2,y2;x3,y3" rows="4">0,0;5,0.2;10,0.4;15,0.6;20,0.8;25,1.0;30,0.9;35,0.7;40,0.5</textarea>
-                            </div>
+                    <div class="capability-card bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                        <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-3">Export Reports</h4>
+                        <div class="space-y-2">
+                            <button onclick="exportProtocol()" class="w-full bg-purple-500 hover:bg-purple-600 text-white py-2 rounded-lg font-medium transition-all button-press">Export Protocol</button>
+                            <button onclick="exportNotes()" class="w-full bg-yellow-500 hover:bg-yellow-600 text-white py-2 rounded-lg font-medium transition-all button-press">Export Notes</button>
+                            <button onclick="exportAll()" class="w-full bg-gray-500 hover:bg-gray-600 text-white py-2 rounded-lg font-medium transition-all button-press">Export All</button>
                         </div>
                     </div>
-
-                    <div class="data-input-section" id="csvInput" style="display: none;">
-                        <h4>CSV File Upload</h4>
-                        <div class="csv-upload">
-                            <input type="file" id="csvFile" accept=".csv" onchange="handleCSVUpload()">
-                            <p>Upload a CSV file with your data. First row should contain headers.</p>
-                        </div>
-                    </div>
-
-                    <div class="data-input-section" id="demoInput" style="display: none;">
-                        <h4>Demo Data Sets</h4>
-                        <div class="demo-buttons">
-                            <button class="demo-btn" onclick="loadDemoData('kinetics')">Kinetic Data</button>
-                            <button class="demo-btn" onclick="loadDemoData('dose')">Dose-Response</button>
-                            <button class="demo-btn" onclick="loadDemoData('spectrum')">UV-Vis Spectrum</button>
-                            <button class="demo-btn" onclick="loadDemoData('chromatography')">HPLC Trace</button>
-                        </div>
-                    </div>
-
-                    <div class="chart-container">
-                        <canvas id="dataChart" width="800" height="400"></canvas>
-                    </div>
-                </div>
-            </div>
-
-            <div class="tab-content" id="reaction-flow">
-                <h3>Reaction Flow Diagram</h3>
-                <div class="reaction-flow-container">
-                    <div class="reaction-builder">
-                        <h4>Build Your Reaction</h4>
-                        <div class="reaction-inputs">
-                            <div class="reaction-input">
-                                <label>Reactant 1:</label>
-                                <input type="text" id="reactant1" placeholder="e.g., Benzyl chloride" value="Benzyl chloride">
-                            </div>
-                            <div class="reaction-input">
-                                <label>Reactant 2:</label>
-                                <input type="text" id="reactant2" placeholder="e.g., NaOH" value="NaOH">
-                            </div>
-                            <div class="reaction-input">
-                                <label>Reagent:</label>
-                                <input type="text" id="reagent" placeholder="e.g., H₂O" value="H₂O">
-                            </div>
-                            <div class="reaction-input">
-                                <label>Solvent:</label>
-                                <input type="text" id="solvent" placeholder="e.g., Ethanol" value="Ethanol">
-                            </div>
-                            <div class="reaction-input">
-                                <label>Product:</label>
-                                <input type="text" id="product" placeholder="e.g., Benzyl alcohol" value="Benzyl alcohol">
-                            </div>
-                            <div class="reaction-input">
-                                <label>Byproduct:</label>
-                                <input type="text" id="byproduct" placeholder="e.g., NaCl" value="NaCl">
-                            </div>
-                        </div>
-                        <div class="export-options">
-                            <button class="export-button" onclick="generateReactionFlow()">Generate Flow</button>
-                            <button class="export-button" onclick="exportReactionSVG()">Export SVG</button>
-                            <button class="export-button" onclick="exportReactionPNG()">Export PNG</button>
-                        </div>
-                    </div>
-
-                    <div class="reaction-diagram" id="reactionDiagram">
-                        <div class="reaction-equation" id="reactionEquation">
-                            <div class="reactant" onclick="showComponentInfo('reactant1')">Benzyl chloride</div>
-                            <span class="reaction-arrow">+</span>
-                            <div class="reagent" onclick="showComponentInfo('reagent')">NaOH</div>
-                            <span class="reaction-arrow">→</span>
-                            <div class="product" onclick="showComponentInfo('product')">Benzyl alcohol</div>
-                            <span class="reaction-arrow">+</span>
-                            <div class="solvent" onclick="showComponentInfo('byproduct')">NaCl</div>
-                        </div>
-                        <div class="reaction-info">
-                            <strong>Reaction Type:</strong> SN2 Substitution | <strong>Solvent:</strong> Ethanol | <strong>Temperature:</strong> 60°C | <strong>Time:</strong> 3 hours
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="tab-content" id="smart-automation">
-                <h3>Smart Automation Integration</h3>
-                <div class="automation-container">
-                    <div class="automation-controls">
-                        <h4>Parameter Controls</h4>
-                        <div class="parameter-sliders">
-                            <div class="slider-group">
-                                <label>Reaction Scale (mmol):</label>
-                                <div class="slider-container">
-                                    <input type="range" class="slider" id="scaleSlider" min="0.1" max="10" step="0.1" value="1" oninput="updateAutomation()">
-                                    <span class="slider-value" id="scaleValue">1.0</span>
-                                </div>
-                            </div>
-                            <div class="slider-group">
-                                <label>Temperature (°C):</label>
-                                <div class="slider-container">
-                                    <input type="range" class="slider" id="tempSlider" min="20" max="100" step="5" value="60" oninput="updateAutomation()">
-                                    <span class="slider-value" id="tempValue">60</span>
-                                </div>
-                            </div>
-                            <div class="slider-group">
-                                <label>Reaction Time (hours):</label>
-                                <div class="slider-container">
-                                    <input type="range" class="slider" id="timeSlider" min="0.5" max="24" step="0.5" value="3" oninput="updateAutomation()">
-                                    <span class="slider-value" id="timeValue">3.0</span>
-                                </div>
-                            </div>
-                            <div class="slider-group">
-                                <label>Volume (mL):</label>
-                                <div class="slider-container">
-                                    <input type="range" class="slider" id="volumeSlider" min="1" max="100" step="1" value="10" oninput="updateAutomation()">
-                                    <span class="slider-value" id="volumeValue">10</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="code-editor">
-                        <div class="code-header">
-                            <span class="code-language">Python</span>
-                            <div class="code-actions">
-                                <button class="code-action-btn" onclick="copyCode()">Copy Code</button>
-                                <button class="code-action-btn" onclick="downloadScript()">Download</button>
-                                <button class="code-action-btn" onclick="validateScript()">Validate</button>
-                            </div>
-                        </div>
-                        <div class="code-content" id="automationCode">
-<span class="code-comment"># Opentrons Protocol for Benzyl Alcohol Synthesis</span>
-<span class="code-comment"># Generated by Catalyze AI Assistant</span>
-<span class="code-comment"># Scale: 1.0 mmol | Temp: 60°C | Time: 3.0 hours</span>
-
-<span class="code-keyword">from</span> opentrons <span class="code-keyword">import</span> protocol_api
-
-metadata = {
-    <span class="code-string">'apiLevel'</span>: <span class="code-string">'2.11'</span>,
-    <span class="code-string">'protocolName'</span>: <span class="code-string">'Benzyl Alcohol Synthesis'</span>,
-    <span class="code-string">'author'</span>: <span class="code-string">'Catalyze AI'</span>,
-    <span class="code-string">'description'</span>: <span class="code-string">'Automated synthesis of benzyl alcohol from benzyl chloride'</span>
-}
-
-<span class="code-keyword">def</span> <span class="code-keyword">run</span>(protocol: protocol_api.ProtocolContext):
-    <span class="code-comment"># Labware setup</span>
-    tiprack = protocol.load_labware(<span class="code-string">'opentrons_96_tiprack_300ul'</span>, <span class="code-number">1</span>)
-    plate = protocol.load_labware(<span class="code-string">'corning_96_wellplate_360ul_flat'</span>, <span class="code-number">2</span>)
-    pipette = protocol.load_instrument(<span class="code-string">'p300_single'</span>, <span class="code-string">'right'</span>, tip_racks=[tiprack])
-    
-    <span class="code-comment"># Calculate volumes based on scale</span>
-    benzyl_chloride_vol = <span class="code-number">100</span>  <span class="code-comment"># μL</span>
-    naoh_vol = <span class="code-number">200</span>  <span class="code-comment"># μL</span>
-    
-    <span class="code-comment"># Step 1: Transfer benzyl chloride</span>
-    pipette.pick_up_tip()
-    pipette.transfer(benzyl_chloride_vol, plate[<span class="code-string">'A1'</span>], plate[<span class="code-string">'B1'</span>], new_tip=<span class="code-string">'never'</span>)
-    pipette.drop_tip()
-    
-    <span class="code-comment"># Step 2: Add NaOH solution</span>
-    pipette.pick_up_tip()
-    pipette.transfer(naoh_vol, plate[<span class="code-string">'A2'</span>], plate[<span class="code-string">'B1'</span>], new_tip=<span class="code-string">'never'</span>)
-    pipette.drop_tip()
-    
-    <span class="code-comment"># Step 3: Mix solution</span>
-    pipette.pick_up_tip()
-    pipette.mix(<span class="code-number">5</span>, <span class="code-number">150</span>, plate[<span class="code-string">'B1'</span>])
-    pipette.drop_tip()
-    
-    protocol.comment(<span class="code-string">f"Incubate at {60}°C for {3.0} hours (manual step)"</span>)
-                        </div>
-                    </div>
-
-                    <div class="automation-preview">
-                        <h4>Protocol Preview</h4>
-                        <div class="preview-stats">
-                            <div class="stat-card">
-                                <div class="stat-value" id="previewScale">1.0</div>
-                                <div class="stat-label">mmol Scale</div>
-                            </div>
-                            <div class="stat-card">
-                                <div class="stat-value" id="previewTemp">60</div>
-                                <div class="stat-label">°C</div>
-                            </div>
-                            <div class="stat-card">
-                                <div class="stat-value" id="previewTime">3.0</div>
-                                <div class="stat-label">hours</div>
-                            </div>
-                            <div class="stat-card">
-                                <div class="stat-value" id="previewVolume">10</div>
-                                <div class="stat-label">mL</div>
-                            </div>
-                        </div>
-                        <p style="color: var(--text-secondary); font-size: 0.9rem; text-align: center;">
-                            <strong>Estimated Yield:</strong> 80-85% | <strong>Purity:</strong> >95% | <strong>Safety Level:</strong> Moderate
-                        </p>
-                    </div>
-                </div>
-            </div>
-
-            <div class="tab-content" id="3d-molecule">
-                <h3>3D Molecular Visualization</h3>
-                <p>Interactive 3D molecular structures will be displayed here.</p>
-            </div>
-
-            <div class="tab-content" id="knowledge-graph">
-                <h3>Knowledge Graph</h3>
-                <p>Interactive knowledge graphs showing chemical relationships will appear here.</p>
-            </div>
-        </div>
-
-        <!-- Creative Footer -->
-        <div class="footer">
-            <div class="footer-content">
-                <h3>Catalyze</h3>
-                <div class="hackathon-info">MIT LLM Hackathon for Material Science and Chemistry</div>
-                <div class="team-names">
-                    Samanvya Tripathi <span class="separator">•</span> Srusti Sain
                 </div>
             </div>
         </div>
     </div>
-
     <script>
-        // Theme Management
-        const themeToggle = document.getElementById('themeToggle');
-        const themeText = document.getElementById('themeText');
-        const themeIcon = document.querySelector('.theme-icon');
-        const body = document.body;
+        // Global variables
+        let chartData = [];
+        let currentChartType = 'scatter';
+        let currentChart = null;
+        let currentTabMode = 'research';  // Current tab: research, protocol, automate, export
+        let currentProtocol = null;  // Store the current protocol
+        let currentAutomationCode = null;  // Store the current automation code
+        
+        // Chat management variables
+        let chatHistory = [];
+        let currentChatId = null;
+        let chatCounter = 0;
 
-        // Load saved theme
-        const savedTheme = localStorage.getItem('theme') || 'light';
-        body.setAttribute('data-theme', savedTheme);
-        updateThemeUI(savedTheme);
+        // Theme management will be initialized after DOM loads
 
-        themeToggle.addEventListener('click', () => {
-            const currentTheme = body.getAttribute('data-theme');
-            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+        // Initialize everything when DOM is loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🚀 Initializing Catalyze App...');
+
+            // Get DOM elements
+            const tabButtons = document.querySelectorAll('.tab-btn');
+            const tabContents = document.querySelectorAll('.tab-content');
+            const chatInput = document.getElementById('chatInput');
+            const chatMessages = document.getElementById('chatMessages');
+            const queryCount = document.getElementById('queryCount');
+            const protocolCount = document.getElementById('protocolCount');
+            const scriptCount = document.getElementById('scriptCount');
+            const newChatBtn = document.getElementById('newChatBtn');
+            const chatHistoryContainer = document.getElementById('chatHistory');
             
-            body.setAttribute('data-theme', newTheme);
-            localStorage.setItem('theme', newTheme);
-            updateThemeUI(newTheme);
-        });
-
-        function updateThemeUI(theme) {
-            if (theme === 'dark') {
-                themeText.textContent = 'Light Mode';
-                themeIcon.textContent = '☀️';
-            } else {
-                themeText.textContent = 'Dark Mode';
-                themeIcon.textContent = '🌙';
-            }
-        }
-
-        // Auto-save System
-        const autoSaveIndicator = document.getElementById('autoSaveIndicator');
-        const autoSaveSpinner = document.getElementById('autoSaveSpinner');
-        const autoSaveText = document.getElementById('autoSaveText');
-        let autoSaveTimeout;
-
-        function showAutoSave(status = 'saving') {
-            autoSaveIndicator.className = `auto-save-indicator show ${status}`;
+            // Individual buttons
+            const sendButton = document.getElementById('sendButton');
             
-            if (status === 'saving') {
-                autoSaveSpinner.style.display = 'inline-block';
-                autoSaveText.textContent = 'Auto-saving...';
-            } else if (status === 'saved') {
-                autoSaveSpinner.style.display = 'none';
-                autoSaveText.textContent = 'Auto-saved';
-                setTimeout(() => {
-                    autoSaveIndicator.classList.remove('show');
-                }, 2000);
-            } else if (status === 'error') {
-                autoSaveSpinner.style.display = 'none';
-                autoSaveText.textContent = 'Save failed';
-                setTimeout(() => {
-                    autoSaveIndicator.classList.remove('show');
-                }, 3000);
-            }
-        }
+            // Theme management
+            const themeToggle = document.getElementById('themeToggle');
+            const themeText = document.getElementById('themeText');
+            const themeLabel = document.getElementById('themeLabel');
+            const body = document.body;
+            const savedTheme = localStorage.getItem('theme') || 'light';
 
-        // Enhanced Tab System
-        const tabButtons = document.querySelectorAll('.tab-button');
-        const tabContents = document.querySelectorAll('.tab-content');
-
-        tabButtons.forEach(button => {
-            button.addEventListener('click', () => {
-                const tabId = button.getAttribute('data-tab');
+            function updateThemeUI(theme) {
+                console.log('Updating theme to:', theme);
+                console.log('Body classes before:', body.className);
                 
-                // Remove active class from all tabs
-                tabButtons.forEach(btn => btn.classList.remove('active'));
+                if (theme === 'dark') {
+                    body.classList.add('dark');
+                    themeText.textContent = '☀️';
+                    themeLabel.textContent = 'Light Mode';
+                } else {
+                    body.classList.remove('dark');
+                    themeText.textContent = '🌙';
+                    themeLabel.textContent = 'Dark Mode';
+                }
+                
+                console.log('Body classes after:', body.className);
+            }
+
+            themeToggle.addEventListener('click', () => {
+                console.log('Theme toggle clicked!');
+                const currentTheme = body.classList.contains('dark') ? 'dark' : 'light';
+                const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+                console.log('Current theme:', currentTheme, 'New theme:', newTheme);
+                localStorage.setItem('theme', newTheme);
+                updateThemeUI(newTheme);
+            });
+
+            // Initialize theme
+            updateThemeUI(savedTheme);
+
+            // Tab switching
+            // Set Notes as default active tab
+            const notesTab = document.querySelector('[data-tab="notes"]');
+            const notesContent = document.getElementById('notes');
+            if (notesTab && notesContent) {
+                notesTab.classList.add('active');
+                notesTab.classList.remove('border-transparent', 'text-white/80');
+                notesTab.classList.add('border-white', 'text-white');
+                notesContent.classList.add('active');
+            }
+            
+            tabButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    const tabId = button.getAttribute('data-tab');
+                    
+                    // Remove active class from all tabs and contents
+                    tabButtons.forEach(btn => {
+                        btn.classList.remove('active');
+                        btn.classList.remove('border-white', 'text-white');
+                        btn.classList.add('border-transparent', 'text-white/80');
+                    });
+                    tabContents.forEach(content => content.classList.remove('active'));
+                    
+                    // Add active class to clicked tab and corresponding content
+                    button.classList.add('active');
+                    button.classList.remove('border-transparent', 'text-white/80');
+                    button.classList.add('border-white', 'text-white');
+                    document.getElementById(tabId).classList.add('active');
+                });
+            });
+
+
+            // Helper function to switch tabs
+            function switchToTab(tabId) {
+                // Remove active class from all tabs and contents
+                tabButtons.forEach(btn => {
+                    btn.classList.remove('active');
+                    btn.classList.remove('border-white', 'text-white');
+                    btn.classList.add('border-transparent', 'text-white/80');
+                });
                 tabContents.forEach(content => content.classList.remove('active'));
                 
-                // Add active class to clicked tab
-                button.classList.add('active');
-                document.getElementById(tabId).classList.add('active');
+                // Add active class to target tab and content
+                const targetTab = document.querySelector(`[data-tab="${tabId}"]`);
+                const targetContent = document.getElementById(tabId);
                 
-                // Auto-save when switching tabs
-                showAutoSave('saving');
-                setTimeout(() => showAutoSave('saved'), 1000);
-            });
-        });
+                if (targetTab && targetContent) {
+                    targetTab.classList.add('active');
+                    targetTab.classList.remove('border-transparent', 'text-white/80');
+                    targetTab.classList.add('border-white', 'text-white');
+                    targetContent.classList.add('active');
+                }
+            }
 
-        // Chat System
-        const chatInput = document.getElementById('chatInput');
-        const sendButton = document.getElementById('sendButton');
-        const chatMessages = document.getElementById('chatMessages');
-        const queryCount = document.getElementById('queryCount');
-        const protocolCount = document.getElementById('protocolCount');
-        const scriptCount = document.getElementById('scriptCount');
-
-        let queryCounter = 0;
-        let protocolCounter = 0;
-        let scriptCounter = 0;
-
-        function addMessage(content, isUser = false) {
-            const messageDiv = document.createElement('div');
-            messageDiv.className = `message ${isUser ? 'user' : 'assistant'}`;
-            messageDiv.innerHTML = `<strong>${isUser ? 'You' : 'Catalyze'}:</strong> ${content}`;
-            chatMessages.appendChild(messageDiv);
-            chatMessages.scrollTop = chatMessages.scrollHeight;
-        }
-
-        function updateStats() {
-            queryCount.textContent = queryCounter;
-            protocolCount.textContent = protocolCounter;
-            scriptCount.textContent = scriptCounter;
-        }
-
-        function sendMessage() {
-            const message = chatInput.value.trim();
-            if (!message) return;
-
-            addMessage(message, true);
-            chatInput.value = '';
-            
-            // Update stats
-            queryCounter++;
-            updateStats();
-            
-            // Show auto-save
-            showAutoSave('saving');
-            
-            // Simulate AI response
-            setTimeout(() => {
-                addMessage("I'm processing your query and will provide a comprehensive response across all tabs. This is a demo response - the full AI integration will provide detailed chemistry information, protocols, and automation scripts.");
-                showAutoSave('saved');
+            // Generate Protocol from Research
+            async function generateProtocolFromResearch() {
+                const protocolContent = document.getElementById('protocolContent');
+                protocolContent.innerHTML = '<div class="text-center"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto"></div><p class="mt-2">Generating protocol...</p></div>';
                 
-                // Update badges based on query type
-                if (message.toLowerCase().includes('protocol') || message.toLowerCase().includes('synthesize')) {
-                    protocolCounter++;
-                    updateStats();
-                    checkBadge('badge2', protocolCounter >= 5);
+                try {
+                    // Get the last research message
+                    const chat = chatHistory.find(c => c.id === currentChatId);
+                    if (!chat || chat.messages.length === 0) {
+                        throw new Error('No research data available');
+                    }
+                    
+                    const lastUserMessage = chat.messages.filter(m => m.isUser).pop();
+                    if (!lastUserMessage) {
+                        throw new Error('No user research input found');
+                    }
+                    
+                    const protocolPrompt = `Generate a detailed laboratory protocol based on this research request: ${lastUserMessage.content}`;
+                    
+                    const response = await fetch('/api/chat', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            message: protocolPrompt,
+                            mode: 'protocol',
+                            conversation_history: []
+                        })
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    
+                    const data = await response.json();
+                    
+                    // Update protocol content
+                    protocolContent.innerHTML = `
+                        <div class="mb-4">
+                            <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">Generated Protocol</h4>
+                            <div class="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-600">
+                                <pre class="whitespace-pre-wrap text-sm text-gray-900 dark:text-white">${data.response}</pre>
+                            </div>
+                        </div>
+                    `;
+                    
+                    // Store protocol for automation
+                    currentProtocol = data.response;
+                    
+                } catch (error) {
+                    console.error('Error generating protocol:', error);
+                    protocolContent.innerHTML = `
+                        <div class="text-center text-red-600 dark:text-red-400">
+                            <p>Error generating protocol: ${error.message}</p>
+                        </div>
+                    `;
                 }
-                if (message.toLowerCase().includes('automation') || message.toLowerCase().includes('opentrons')) {
-                    scriptCounter++;
-                    updateStats();
-                    checkBadge('badge3', scriptCounter >= 3);
-                }
-                if (message.toLowerCase().includes('safety') || message.toLowerCase().includes('hazard')) {
-                    checkBadge('badge4', true);
-                }
-            }, 1500);
-        }
-
-        sendButton.addEventListener('click', sendMessage);
-        chatInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                sendMessage();
             }
-        });
 
-        // Demo Query System
-        const demoQueries = document.querySelectorAll('.demo-query');
-        demoQueries.forEach(query => {
-            query.addEventListener('click', () => {
-                const queryText = query.getAttribute('data-query');
-                chatInput.value = queryText;
-                sendMessage();
-            });
-        });
-
-        // Export System
-        const exportButtons = document.querySelectorAll('.export-button');
-        exportButtons.forEach(button => {
-            button.addEventListener('click', () => {
-                const exportType = button.id.replace('export', '').toLowerCase();
-                showAutoSave('saving');
+            // Generate Automation Code
+            async function generateAutomationCode() {
+                const automationContent = document.getElementById('automationContent');
+                automationContent.innerHTML = '<div class="text-center"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mx-auto"></div><p class="mt-2">Generating automation code...</p></div>';
                 
-                setTimeout(() => {
-                    showAutoSave('saved');
-                    // Here you would implement actual export functionality
-                    console.log(`Exporting as ${exportType}...`);
-                }, 1000);
-            });
-        });
-
-        // Badge System
-        function checkBadge(badgeId, condition) {
-            const badge = document.getElementById(badgeId);
-            if (condition && !badge.classList.contains('earned')) {
-                badge.classList.add('earned');
-                // Animate badge earning
-                badge.style.transform = 'scale(1.1)';
-                setTimeout(() => {
-                    badge.style.transform = 'scale(1)';
-                }, 300);
+                try {
+                    if (!currentProtocol) {
+                        throw new Error('No protocol available for automation');
+                    }
+                    
+                    const automationPrompt = `Generate Python automation code for this protocol: ${currentProtocol}`;
+                    
+                    const response = await fetch('/api/chat', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            message: automationPrompt,
+                            mode: 'automate',
+                            conversation_history: []
+                        })
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    
+                    const data = await response.json();
+                    
+                    // Store automation code
+                    currentAutomationCode = data.response;
+                    
+                    // Update automation content
+                    automationContent.innerHTML = `
+                        <div class="mb-4">
+                            <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">Generated Automation Code</h4>
+                            <div class="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-600">
+                                <pre class="whitespace-pre-wrap text-sm text-gray-900 dark:text-white overflow-x-auto">${data.response}</pre>
+                            </div>
+                        </div>
+                    `;
+                    
+                } catch (error) {
+                    console.error('Error generating automation code:', error);
+                    automationContent.innerHTML = `
+                        <div class="text-center text-red-600 dark:text-red-400">
+                            <p>Error generating automation code: ${error.message}</p>
+                        </div>
+                    `;
+                }
             }
-        }
-
-        // Auto-save on input changes
-        chatInput.addEventListener('input', () => {
-            clearTimeout(autoSaveTimeout);
-            autoSaveTimeout = setTimeout(() => {
-                showAutoSave('saving');
-                setTimeout(() => showAutoSave('saved'), 500);
-            }, 1000);
-        });
-
-        // Calculator Functions
-        function calculateMolarity() {
-            const mass = parseFloat(document.getElementById('mass').value);
-            const mw = parseFloat(document.getElementById('mw').value);
-            const volume = parseFloat(document.getElementById('volume').value);
             
-            if (mass && mw && volume) {
-                const molarity = (mass / mw) / volume;
-                const result = document.getElementById('molarityResult');
-                result.innerHTML = `Molarity = ${molarity.toFixed(4)} M`;
-                result.classList.add('show');
-            } else {
-                alert('Please fill in all fields');
-            }
-        }
-
-        function calculateDilution() {
-            const c1 = parseFloat(document.getElementById('c1').value);
-            const v1 = parseFloat(document.getElementById('v1').value);
-            const c2 = parseFloat(document.getElementById('c2').value);
+            // Button Event Listeners
             
-            if (c1 && v1 && c2) {
-                const v2 = (c1 * v1) / c2;
-                const result = document.getElementById('dilutionResult');
-                result.innerHTML = `Final Volume (V₂) = ${v2.toFixed(4)} L<br>Dilution Factor = ${(v2/v1).toFixed(2)}`;
-                result.classList.add('show');
-            } else {
-                alert('Please fill in all fields');
-            }
-        }
-
-        function calculateYield() {
-            const theoretical = parseFloat(document.getElementById('theoretical').value);
-            const actual = parseFloat(document.getElementById('actual').value);
             
-            if (theoretical && actual) {
-                const yield = (actual / theoretical) * 100;
-                const result = document.getElementById('yieldResult');
-                result.innerHTML = `Yield = ${yield.toFixed(2)}%`;
-                result.classList.add('show');
-            } else {
-                alert('Please fill in both yields');
+            // Export functions
+            function exportAllData() {
+                const data = {
+                    protocol: currentProtocol,
+                    automationCode: currentAutomationCode,
+                    timestamp: new Date().toISOString()
+                };
+                
+                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                const url = window.URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `catalyze_export_${Date.now()}.json`;
+                link.click();
             }
-        }
-
-        // Notes Functions
-        function formatText(command) {
-            document.execCommand(command, false, null);
-            updateNotesStatus();
-        }
-
-        function insertBullet() {
-            document.execCommand('insertUnorderedList', false, null);
-            updateNotesStatus();
-        }
-
-        function insertNumbered() {
-            document.execCommand('insertOrderedList', false, null);
-            updateNotesStatus();
-        }
-
-        function clearNotes() {
-            if (confirm('Are you sure you want to clear all notes?')) {
-                document.getElementById('notesEditor').innerHTML = '<p>Notes cleared. Start typing...</p>';
-                updateNotesStatus();
-                saveNotes();
+            
+            function exportProtocolData() {
+                if (!currentProtocol) {
+                    alert('No protocol to export');
+                    return;
+                }
+                
+                const blob = new Blob([currentProtocol], { type: 'text/plain' });
+                const url = window.URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `protocol_${Date.now()}.txt`;
+                link.click();
             }
-        }
-
-        function exportNotes() {
-            const notesContent = document.getElementById('notesEditor').innerHTML;
-            const blob = new Blob([notesContent], { type: 'text/html' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'research-notes.html';
-            a.click();
-            URL.revokeObjectURL(url);
-        }
-
-        function saveNotes() {
-            const notesContent = document.getElementById('notesEditor').innerHTML;
-            localStorage.setItem('catalyze-notes', notesContent);
-            updateNotesStatus();
-        }
-
-        function loadNotes() {
-            const savedNotes = localStorage.getItem('catalyze-notes');
-            if (savedNotes) {
-                document.getElementById('notesEditor').innerHTML = savedNotes;
+            
+            function exportCodeData() {
+                if (!currentAutomationCode) {
+                    alert('No automation code to export');
+                    return;
+                }
+                
+                const blob = new Blob([currentAutomationCode], { type: 'text/plain' });
+                const url = window.URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `automation_code_${Date.now()}.py`;
+                link.click();
             }
-        }
 
-        function updateNotesStatus() {
-            const status = document.getElementById('notesStatus');
-            status.textContent = 'Saving...';
-            setTimeout(() => {
-                status.textContent = 'Auto-saved';
-            }, 1000);
-        }
+            // Chat management functions
+            function createNewChat() {
+                chatCounter++;
+                const chatId = `chat_${chatCounter}`;
+                const chatName = prompt('Enter a name for this chat:') || `New Chat ${chatCounter}`;
+                
+                const newChat = {
+                    id: chatId,
+                    name: chatName,
+                    messages: [],
+                    createdAt: new Date().toISOString()
+                };
+                
+                chatHistory.unshift(newChat);
+                currentChatId = chatId;
+                
+                // Reset workflow state
+                currentTabMode = 'research';
+                currentProtocol = null;
+                currentAutomationCode = null;
+                
+                
+                // Clear current chat messages
+                chatMessages.innerHTML = `
+                    <div class="text-center">
+                        <div class="text-4xl mb-4 floating-animation">👋</div>
+                        <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-2">Hello! I'm Catalyze</h3>
+                        <p class="text-gray-600 dark:text-gray-400 mb-4">Your AI chemistry assistant. I can help you with research questions, protocol generation, lab automation, and safety analysis.</p>
+                        <p class="text-gray-600 dark:text-gray-400">What would you like to explore today?</p>
+                    </div>
+                `;
+                
+                updateChatHistory();
+                saveChatHistory();
+            }
 
-        // Auto-save notes
-        document.addEventListener('DOMContentLoaded', () => {
-            const notesEditor = document.getElementById('notesEditor');
-            if (notesEditor) {
-                loadNotes();
-                notesEditor.addEventListener('input', () => {
-                    saveNotes();
+            function updateChatHistory() {
+                chatHistoryContainer.innerHTML = '';
+                
+                chatHistory.forEach(chat => {
+                    const chatItem = document.createElement('div');
+                    chatItem.className = `p-3 rounded-lg cursor-pointer transition-colors ${currentChatId === chat.id ? 'bg-blue-100 dark:bg-blue-900' : 'hover:bg-gray-100 dark:hover:bg-gray-700'}`;
+                    chatItem.innerHTML = `
+                        <div class="flex justify-between items-center">
+                            <div class="flex-1 min-w-0">
+                                <h4 class="text-sm font-medium text-gray-900 dark:text-white truncate">${chat.name}</h4>
+                                <p class="text-xs text-gray-500 dark:text-gray-400">${new Date(chat.createdAt).toLocaleDateString()}</p>
+                            </div>
+                            <button onclick="deleteChat('${chat.id}', event)" class="delete-chat-btn ml-2" title="Delete this chat">🗑️</button>
+                        </div>
+                    `;
+                    
+                    chatItem.addEventListener('click', () => loadChat(chat.id));
+                    chatHistoryContainer.appendChild(chatItem);
                 });
             }
-        });
 
-        // Data Visualizer Functions
-        let currentChart = null;
-
-        function updateDataInput() {
-            const inputType = document.getElementById('dataInput').value;
-            document.querySelectorAll('.data-input-section').forEach(section => {
-                section.style.display = 'none';
-            });
-            document.getElementById(inputType + 'Input').style.display = 'block';
-        }
-
-        function generateChart() {
-            const chartType = document.getElementById('chartType').value;
-            const inputType = document.getElementById('dataInput').value;
-            
-            if (inputType === 'manual') {
-                createManualChart(chartType);
-            } else if (inputType === 'demo') {
-                createDemoChart(chartType);
+            function loadChat(chatId) {
+                const chat = chatHistory.find(c => c.id === chatId);
+                if (!chat) return;
+                
+                currentChatId = chatId;
+                
+                // Clear and populate chat messages
+                chatMessages.innerHTML = '';
+                chat.messages.forEach(message => {
+                    addMessage(message.content, message.isUser);
+                });
+                
+                updateChatHistory();
             }
-        }
 
-        function createManualChart(type) {
-            const title = document.getElementById('chartTitle').value;
-            const xLabel = document.getElementById('xAxisLabel').value;
-            const yLabel = document.getElementById('yAxisLabel').value;
-            const dataText = document.getElementById('dataPoints').value;
-            
-            const points = dataText.split(';').map(point => {
-                const [x, y] = point.split(',');
-                return { x: parseFloat(x), y: parseFloat(y) };
-            });
-            
-            createChart(type, title, xLabel, yLabel, points);
-        }
-
-        function createDemoChart(type) {
-            const demos = {
-                kinetics: { title: 'Reaction Kinetics', x: 'Time (min)', y: 'Concentration (M)', data: [
-                    {x: 0, y: 1.0}, {x: 5, y: 0.8}, {x: 10, y: 0.6}, {x: 15, y: 0.4}, {x: 20, y: 0.2}, {x: 25, y: 0.1}
-                ]},
-                dose: { title: 'Dose-Response Curve', x: 'Concentration (μM)', y: 'Response (%)', data: [
-                    {x: 0, y: 0}, {x: 0.1, y: 5}, {x: 1, y: 25}, {x: 10, y: 50}, {x: 100, y: 75}, {x: 1000, y: 90}
-                ]},
-                spectrum: { title: 'UV-Vis Spectrum', x: 'Wavelength (nm)', y: 'Absorbance', data: [
-                    {x: 200, y: 0.1}, {x: 250, y: 0.3}, {x: 300, y: 0.8}, {x: 350, y: 1.2}, {x: 400, y: 0.9}, {x: 450, y: 0.4}
-                ]},
-                chromatography: { title: 'HPLC Chromatogram', x: 'Retention Time (min)', y: 'Signal (mAU)', data: [
-                    {x: 0, y: 0}, {x: 2, y: 0}, {x: 5, y: 100}, {x: 8, y: 0}, {x: 12, y: 150}, {x: 15, y: 0}
-                ]}
-            };
-            
-            const demo = demos[document.querySelector('.demo-btn:focus')?.onclick?.toString().match(/'(\w+)'/)?.[1] || 'kinetics'];
-            createChart(type, demo.title, demo.x, demo.y, demo.data);
-        }
-
-        function createChart(type, title, xLabel, yLabel, data) {
-            const ctx = document.getElementById('dataChart').getContext('2d');
-            
-            if (currentChart) {
-                currentChart.destroy();
-            }
-            
-            const config = {
-                type: type,
-                data: {
-                    labels: data.map(d => d.x),
-                    datasets: [{
-                        label: title,
-                        data: data.map(d => d.y),
-                        borderColor: '#3b82f6',
-                        backgroundColor: type === 'line' ? 'transparent' : '#3b82f6',
-                        tension: 0.4
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    plugins: {
-                        title: { display: true, text: title, font: { size: 16, weight: 'bold' } },
-                        legend: { display: true }
-                    },
-                    scales: type !== 'pie' && type !== 'doughnut' ? {
-                        x: { title: { display: true, text: xLabel } },
-                        y: { title: { display: true, text: yLabel } }
-                    } : {}
+            function deleteChat(chatId, event) {
+                // Prevent event propagation to avoid triggering chat load
+                if (event) {
+                    event.stopPropagation();
                 }
-            };
-            
-            currentChart = new Chart(ctx, config);
-        }
+                
+                console.log('Deleting chat:', chatId);
+                console.log('Current chat history:', chatHistory.map(c => c.id));
+                
+                if (confirm(`Are you sure you want to delete "${chatHistory.find(c => c.id === chatId)?.name || chatId}"?`)) {
+                    const originalLength = chatHistory.length;
+                    chatHistory = chatHistory.filter(c => c.id !== chatId);
+                    
+                    console.log(`Deleted chat ${chatId}. History length: ${originalLength} -> ${chatHistory.length}`);
+                    
+                    if (currentChatId === chatId) {
+                        if (chatHistory.length > 0) {
+                            loadChat(chatHistory[0].id);
+                        } else {
+                            // Don't create a new chat automatically - just clear the current view
+                            currentChatId = null;
+                            chatMessages.innerHTML = '';
+                            document.querySelector('.chat-title').textContent = 'New Chat';
+                        }
+                    }
+                    
+                    updateChatHistory();
+                    saveChatHistory();
+                }
+            }
 
-        function loadDemoData(type) {
-            document.getElementById('dataInput').value = 'demo';
-            updateDataInput();
-            createDemoChart(document.getElementById('chartType').value);
-        }
+            function saveChatHistory() {
+                localStorage.setItem('chatHistory', JSON.stringify(chatHistory));
+            }
 
-        function exportChart() {
-            if (currentChart) {
+            function loadChatHistory() {
+                const saved = localStorage.getItem('chatHistory');
+                if (saved) {
+                    chatHistory = JSON.parse(saved);
+                    if (chatHistory.length > 0) {
+                        currentChatId = chatHistory[0].id;
+                        loadChat(currentChatId);
+                    }
+                }
+            }
+
+            // Chat functions
+            function addMessage(content, isUser = false, isLoading = false) {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `mb-4 ${isUser ? 'ml-auto max-w-md' : ''}`;
+                
+                // Generate unique ID for loading messages
+                const messageId = isLoading ? 'loading-' + Date.now() : null;
+                if (messageId) {
+                    messageDiv.id = messageId;
+                }
+                
+                messageDiv.innerHTML = `
+                    <div class="bg-gray-100 dark:bg-gray-700 rounded-lg p-4 ${isUser ? 'bg-blue-100 dark:bg-blue-900' : ''} ${isLoading ? 'animate-pulse' : ''}">
+                        <p class="text-gray-900 dark:text-white whitespace-pre-line">${content}</p>
+                    </div>
+                `;
+                chatMessages.appendChild(messageDiv);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+                
+                // Save message to current chat
+                if (currentChatId) {
+                    const chat = chatHistory.find(c => c.id === currentChatId);
+                    if (chat) {
+                        chat.messages.push({
+                            content: content,
+                            isUser: isUser,
+                            timestamp: new Date().toISOString()
+                        });
+                        
+                        // Update chat name if it's the first user message
+                        if (isUser && chat.messages.filter(m => m.isUser).length === 1) {
+                            chat.name = content.length > 30 ? content.substring(0, 30) + '...' : content;
+                            updateChatHistory();
+                        }
+                        
+                        saveChatHistory();
+                    }
+                }
+                
+                return messageId;
+            }
+
+            function updateStats() {
+                const messages = chatMessages.querySelectorAll('.ml-auto');
+                queryCount.textContent = messages.length;
+            }
+
+            async function sendMessage() {
+                const message = chatInput.value.trim();
+                if (message) {
+                    // Create new chat if none exists
+                    if (!currentChatId) {
+                        createNewChat();
+                    }
+                    
+                    addMessage(message, true);
+                    chatInput.value = '';
+                    updateStats();
+                    
+                    // Show loading message
+                    const loadingId = addMessage("🤖 Thinking...", false, true);
+                    
+                    try {
+                        // Get conversation history for context
+                        const chat = chatHistory.find(c => c.id === currentChatId);
+                        const conversationHistory = chat ? chat.messages.map(msg => ({
+                            role: msg.isUser ? "user" : "assistant",
+                            content: msg.content
+                        })) : [];
+                        
+                        // Determine the mode based on current tab
+                        let mode = 'research';
+                        if (currentTabMode === 'protocol') {
+                            mode = 'protocol';
+                        } else if (currentTabMode === 'automate') {
+                            mode = 'automate';
+                        } else if (currentTabMode === 'export') {
+                            mode = 'research'; // Export tab uses research mode for chat
+                        }
+                        
+                        // Call the chat API
+                        const requestBody = {
+                            message: message,
+                            mode: mode,
+                            conversation_history: conversationHistory
+                        };
+                        
+                        // Add PDF context if available
+                        if (currentPdfContext) {
+                            requestBody.pdf_context = currentPdfContext;
+                        }
+                        
+                        const response = await fetch('/api/chat', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify(requestBody)
+                        });
+                        
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        
+                        const data = await response.json();
+                        
+                        // Remove loading message
+                        const loadingElement = document.getElementById(loadingId);
+                        if (loadingElement) {
+                            loadingElement.remove();
+                        }
+                        
+                        // Add the LLM response with agent info
+                        const agentInfo = data.agent_used ? ` (via ${data.agent_used} agent)` : '';
+                        const pdfInfo = currentPdfContext ? ` 📄 (analyzing "${currentPdfContext.filename}")` : '';
+                        addMessage(data.response || "I've processed your request successfully!" + agentInfo + pdfInfo);
+                        
+                        // Handle different tab modes
+                        if (currentTabMode === 'research') {
+                            // Store research data for protocol generation
+                            console.log('Research completed');
+                        } else if (currentTabMode === 'protocol') {
+                            // Store protocol data
+                            currentProtocol = data.response;
+                            console.log('Protocol generated');
+                        } else if (currentTabMode === 'automate') {
+                            // Store automation code
+                            currentAutomationCode = data.response;
+                            console.log('Automation code generated');
+                        }
+                        
+                    } catch (error) {
+                        console.error('Error calling API:', error);
+                        
+                        // Remove loading message
+                        const loadingElement = document.getElementById(loadingId);
+                        if (loadingElement) {
+                            loadingElement.remove();
+                        }
+                        
+                        // Show error message
+                        addMessage("Sorry, I encountered an error processing your request. Please try again.");
+                    }
+                }
+            }
+
+
+            // Generate Safety Information for Protocol
+            async function generateSafetyForProtocol(protocolText) {
+                try {
+                    // Generate safety analysis for the protocol
+                    const safetyPrompt = `Analyze the safety hazards and provide safety information for this protocol: ${protocolText}`;
+                    
+                    // Get conversation history for context
+                    const chat = chatHistory.find(c => c.id === currentChatId);
+                    const conversationHistory = chat ? chat.messages.map(msg => ({
+                        role: msg.isUser ? "user" : "assistant",
+                        content: msg.content
+                    })) : [];
+                    
+                    // Call the chat API with safety mode
+                    const response = await fetch('/api/chat', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            message: safetyPrompt,
+                            mode: 'safety',
+                            conversation_history: conversationHistory
+                        })
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    
+                    const data = await response.json();
+                    
+                    // Update safety tab with the safety information
+                    updateSafetyData(data.response);
+                    
+                } catch (error) {
+                    console.error('Error generating safety information:', error);
+                }
+            }
+
+            // Helper functions for updating tabs with API data
+            function updateChemicalData(chemicalData) {
+                // Update the chemicals tab with the data from API
+                const chemicalsTab = document.getElementById('chemicals');
+                if (chemicalsTab && chemicalData) {
+                    let html = '<h3 class="text-lg font-semibold mb-4">Chemical Information</h3>';
+                    for (const [chemical, data] of Object.entries(chemicalData)) {
+                        html += `<div class="mb-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                            <h4 class="font-semibold text-blue-600 dark:text-blue-400">${chemical}</h4>
+                            <pre class="text-sm mt-2">${JSON.stringify(data, null, 2)}</pre>
+                        </div>`;
+                    }
+                    chemicalsTab.innerHTML = html;
+                }
+            }
+
+            function updateProtocolData(protocol) {
+                // Store the current protocol
+                currentProtocol = protocol;
+                workflowState = 'protocol_generated';
+                
+                // Show the automate button
+                automateButton.style.display = 'flex';
+                
+                // Update the protocol tab with the data from API
+                const protocolTab = document.getElementById('protocol');
+                if (protocolTab && protocol) {
+                    let html = '<h3 class="text-lg font-semibold mb-4">Generated Protocol</h3>';
+                    html += `<div class="mb-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                        <pre class="text-sm">${JSON.stringify(protocol, null, 2)}</pre>
+                    </div>`;
+                    protocolTab.innerHTML = html;
+                }
+            }
+
+            function updateAutomationData(automationCode) {
+                // Update the automation tab with the generated code
+                const automationTab = document.getElementById('automation');
+                if (automationTab && automationCode) {
+                    let html = '<h3 class="text-lg font-semibold mb-4">Generated Automation Code</h3>';
+                    html += `<div class="mb-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                        <pre class="text-sm overflow-x-auto">${automationCode}</pre>
+                    </div>`;
+                    automationTab.innerHTML = html;
+                }
+            }
+
+            function updateSafetyData(safetyInfo) {
+                // Update the safety tab with the safety information
+                const safetyTab = document.getElementById('safety');
+                if (safetyTab && safetyInfo) {
+                    let html = '<h3 class="text-lg font-semibold mb-4">Safety Analysis</h3>';
+                    html += `<div class="mb-4 p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
+                        <div class="text-sm">${safetyInfo}</div>
+                    </div>`;
+                    safetyTab.innerHTML = html;
+                }
+            }
+
+
+
+            // Notes functions
+            function saveNotes() {
+                const notes = document.getElementById('notesTextarea').value;
+                localStorage.setItem('labNotes', notes);
+            }
+
+            function clearNotes() {
+                if (confirm('Are you sure you want to clear all notes?')) {
+                    document.getElementById('notesTextarea').value = '';
+                    localStorage.removeItem('labNotes');
+                }
+            }
+
+            function loadNotes() {
+                const savedNotes = localStorage.getItem('labNotes');
+                if (savedNotes) {
+                    document.getElementById('notesTextarea').value = savedNotes;
+                }
+            }
+
+            // Data visualizer functions
+            function selectChartType(type) {
+                currentChartType = type;
+                document.querySelectorAll('.chart-type-btn').forEach(btn => {
+                    btn.classList.remove('bg-blue-100', 'dark:bg-blue-900', 'text-blue-800', 'dark:text-blue-200');
+                    btn.classList.add('text-gray-600', 'dark:text-gray-400');
+                });
+                event.target.classList.add('bg-blue-100', 'dark:bg-blue-900', 'text-blue-800', 'dark:text-blue-200');
+                event.target.classList.remove('text-gray-600', 'dark:text-gray-400');
+            }
+
+            function addDataPoint() {
+                const x = parseFloat(document.getElementById('dataX').value);
+                const y = parseFloat(document.getElementById('dataY').value);
+                
+                if (!isNaN(x) && !isNaN(y)) {
+                    chartData.push({ x: x, y: y });
+                    updateDataTable();
+                    document.getElementById('dataX').value = '';
+                    document.getElementById('dataY').value = '';
+                } else {
+                    alert('Please enter valid numbers');
+                }
+            }
+
+            function loadSampleData() {
+                chartData = [
+                    { x: 1, y: 2.1 },
+                    { x: 2, y: 3.9 },
+                    { x: 3, y: 6.2 },
+                    { x: 4, y: 8.1 },
+                    { x: 5, y: 10.3 }
+                ];
+                updateDataTable();
+            }
+
+            function updateDataTable() {
+                const tbody = document.getElementById('dataTableBody');
+                tbody.innerHTML = '';
+                chartData.forEach((point, index) => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td class="py-1">${point.x}</td>
+                        <td class="py-1">${point.y}</td>
+                        <td class="py-1">
+                            <button onclick="removeDataPoint(${index})" class="text-red-500 hover:text-red-700 text-sm">×</button>
+                        </td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            }
+
+            function removeDataPoint(index) {
+                chartData.splice(index, 1);
+                updateDataTable();
+            }
+
+            function clearAllData() {
+                chartData = [];
+                updateDataTable();
+                clearChart();
+            }
+
+            function generateChart() {
+                if (chartData.length === 0) {
+                    alert('Please add some data first');
+                    return;
+                }
+
+                clearChart();
+                
+                const ctx = document.createElement('canvas');
+                ctx.id = 'myChart';
+                ctx.width = 800;
+                ctx.height = 400;
+                document.getElementById('chartContainer').innerHTML = '';
+                document.getElementById('chartContainer').appendChild(ctx);
+
+                const labels = chartData.map(point => point.x.toString());
+                const data = chartData.map(point => point.y);
+
+                let config = {
+                    type: currentChartType,
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Data',
+                            data: data,
+                            backgroundColor: 'rgba(102, 126, 234, 0.6)',
+                            borderColor: 'rgba(102, 126, 234, 1)',
+                            borderWidth: 2
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: `${currentChartType.charAt(0).toUpperCase() + currentChartType.slice(1)} Chart`
+                            }
+                        }
+                    }
+                };
+
+                if (currentChartType === 'scatter') {
+                    config.data.datasets[0].data = chartData;
+                    config.data.datasets[0].showLine = false;
+                }
+
+                currentChart = new Chart(ctx, config);
+            }
+
+            function clearChart() {
+                if (currentChart) {
+                    currentChart.destroy();
+                    currentChart = null;
+                }
+                document.getElementById('chartContainer').innerHTML = '<p class="text-gray-500 dark:text-gray-400">Select chart type and add data to generate chart</p>';
+            }
+
+            function downloadChart() {
+                if (!currentChart) {
+                    alert('Please generate a chart first');
+                    return;
+                }
+                
                 const link = document.createElement('a');
-                link.download = 'chart.png';
+                link.download = `chart_${currentChartType}_${Date.now()}.png`;
                 link.href = currentChart.toBase64Image();
                 link.click();
             }
-        }
 
-        function clearChart() {
-            if (currentChart) {
-                currentChart.destroy();
-                currentChart = null;
+            // Export functions
+            function exportToCSV() {
+                if (chartData.length === 0) {
+                    alert('No data to export');
+                    return;
+                }
+                
+                let csv = 'X,Y\n';
+                chartData.forEach(point => {
+                    csv += `${point.x},${point.y}\n`;
+                });
+                
+                const blob = new Blob([csv], { type: 'text/csv' });
+                const url = window.URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `data_${Date.now()}.csv`;
+                link.click();
             }
-        }
 
-        function handleCSVUpload() {
-            const file = document.getElementById('csvFile').files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    const csv = e.target.result;
-                    // Basic CSV parsing - can be enhanced
-                    console.log('CSV uploaded:', csv);
+            function exportToJSON() {
+                const data = {
+                    chartType: currentChartType,
+                    data: chartData,
+                    timestamp: new Date().toISOString()
                 };
-                reader.readAsText(file);
+                
+                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                const url = window.URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `data_${Date.now()}.json`;
+                link.click();
             }
-        }
 
-        // Reaction Flow Diagram Functions
-        function generateReactionFlow() {
-            const reactant1 = document.getElementById('reactant1').value;
-            const reactant2 = document.getElementById('reactant2').value;
-            const reagent = document.getElementById('reagent').value;
-            const solvent = document.getElementById('solvent').value;
-            const product = document.getElementById('product').value;
-            const byproduct = document.getElementById('byproduct').value;
-
-            const equation = document.getElementById('reactionEquation');
-            equation.innerHTML = `
-                <div class="reactant" onclick="showComponentInfo('reactant1')">${reactant1}</div>
-                <span class="reaction-arrow">+</span>
-                <div class="reagent" onclick="showComponentInfo('reagent')">${reagent}</div>
-                <span class="reaction-arrow">→</span>
-                <div class="product" onclick="showComponentInfo('product')">${product}</div>
-                <span class="reaction-arrow">+</span>
-                <div class="solvent" onclick="showComponentInfo('byproduct')">${byproduct}</div>
-            `;
-
-            // Update reaction info
-            const info = document.querySelector('.reaction-info');
-            info.innerHTML = `
-                <strong>Reaction Type:</strong> SN2 Substitution | 
-                <strong>Solvent:</strong> ${solvent} | 
-                <strong>Temperature:</strong> 60°C | 
-                <strong>Time:</strong> 3 hours
-            `;
-
-            showAutoSave('saving');
-            setTimeout(() => showAutoSave('saved'), 1000);
-        }
-
-        function showComponentInfo(component) {
-            const components = {
-                reactant1: { name: 'Benzyl chloride', mw: '126.58 g/mol', density: '1.1 g/mL', hazards: 'Toxic, skin irritant' },
-                reagent: { name: 'NaOH', mw: '39.99 g/mol', density: '2.13 g/mL', hazards: 'Corrosive, causes burns' },
-                product: { name: 'Benzyl alcohol', mw: '108.14 g/mol', density: '1.04 g/mL', hazards: 'Irritant' },
-                byproduct: { name: 'NaCl', mw: '58.44 g/mol', density: '2.16 g/mL', hazards: 'Low hazard' }
-            };
-
-            const info = components[component];
-            if (info) {
-                alert(`${info.name}\nMolecular Weight: ${info.mw}\nDensity: ${info.density}\nHazards: ${info.hazards}`);
+            function exportToPDF() {
+                alert('PDF export feature coming soon!');
             }
-        }
 
-        function exportReactionSVG() {
-            const diagram = document.getElementById('reactionDiagram');
-            const svg = `
-                <svg width="800" height="300" xmlns="http://www.w3.org/2000/svg">
-                    <rect width="100%" height="100%" fill="white"/>
-                    <text x="400" y="50" text-anchor="middle" font-size="20" font-weight="bold">Reaction Flow Diagram</text>
-                    <text x="400" y="250" text-anchor="middle" font-size="12">Generated by Catalyze AI</text>
-                </svg>
-            `;
+            function exportProtocol() {
+                alert('Protocol export feature coming soon!');
+            }
+
+            function exportNotes() {
+                const notes = document.getElementById('notesTextarea').value;
+                if (!notes.trim()) {
+                    alert('No notes to export');
+                    return;
+                }
+                
+                const blob = new Blob([notes], { type: 'text/plain' });
+                const url = window.URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `notes_${Date.now()}.txt`;
+                link.click();
+            }
+
+            function exportAll() {
+                alert('Export all feature coming soon!');
+            }
+
+            // PDF Upload Functions
+            let currentPdfContext = null;
             
-            const blob = new Blob([svg], { type: 'image/svg+xml' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'reaction-flow.svg';
-            a.click();
-            URL.revokeObjectURL(url);
-        }
-
-        function exportReactionPNG() {
-            // For PNG export, we'd need to convert SVG to canvas
-            alert('PNG export feature coming soon! Use SVG export for now.');
-        }
-
-        // Smart Automation Functions
-        function updateAutomation() {
-            const scale = document.getElementById('scaleSlider').value;
-            const temp = document.getElementById('tempSlider').value;
-            const time = document.getElementById('timeSlider').value;
-            const volume = document.getElementById('volumeSlider').value;
-
-            // Update display values
-            document.getElementById('scaleValue').textContent = scale;
-            document.getElementById('tempValue').textContent = temp;
-            document.getElementById('timeValue').textContent = time;
-            document.getElementById('volumeValue').textContent = volume;
-
-            // Update preview stats
-            document.getElementById('previewScale').textContent = scale;
-            document.getElementById('previewTemp').textContent = temp;
-            document.getElementById('previewTime').textContent = time;
-            document.getElementById('previewVolume').textContent = volume;
-
-            // Update code with new parameters
-            updateAutomationCode(scale, temp, time, volume);
-        }
-
-        function updateAutomationCode(scale, temp, time, volume) {
-            const benzylChlorideVol = Math.round(100 * scale);
-            const naohVol = Math.round(200 * scale);
+            function togglePdfUpload() {
+                const uploadArea = document.getElementById('pdfUploadArea');
+                const chatInput = document.getElementById('chatInput');
+                
+                if (uploadArea.style.display === 'none') {
+                    uploadArea.style.display = 'block';
+                    chatInput.placeholder = 'Upload a PDF first, then ask questions about it...';
+                } else {
+                    uploadArea.style.display = 'none';
+                    chatInput.placeholder = 'Ask about chemistry, materials, or lab protocols...';
+                }
+            }
             
-            const code = document.getElementById('automationCode');
-            code.innerHTML = `
-<span class="code-comment"># Opentrons Protocol for Benzyl Alcohol Synthesis</span>
-<span class="code-comment"># Generated by Catalyze AI Assistant</span>
-<span class="code-comment"># Scale: ${scale} mmol | Temp: ${temp}°C | Time: ${time} hours</span>
+            function clearPdfContext() {
+                currentPdfContext = null;
+                document.getElementById('pdfFileInput').value = '';
+                document.getElementById('pdfUploadSuccess').classList.add('hidden');
+                document.getElementById('pdfUploadError').classList.add('hidden');
+                document.getElementById('pdfUploadProgress').classList.add('hidden');
+                document.getElementById('chatInput').placeholder = 'Ask about chemistry, materials, or lab protocols...';
+                console.log('PDF context cleared');
+            }
+            
+            async function uploadPdf(file) {
+                const formData = new FormData();
+                formData.append('pdf', file);
+                
+                // Show progress
+                const progressDiv = document.getElementById('pdfUploadProgress');
+                const progressBar = document.getElementById('pdfProgressBar');
+                const statusText = document.getElementById('pdfUploadStatus');
+                
+                progressDiv.classList.remove('hidden');
+                document.getElementById('pdfUploadSuccess').classList.add('hidden');
+                document.getElementById('pdfUploadError').classList.add('hidden');
+                
+                try {
+                    // Simulate progress
+                    let progress = 0;
+                    const progressInterval = setInterval(() => {
+                        progress += Math.random() * 30;
+                        if (progress > 90) progress = 90;
+                        progressBar.style.width = progress + '%';
+                        statusText.textContent = progress < 50 ? 'Uploading PDF...' : 'Processing PDF...';
+                    }, 200);
+                    
+                    const response = await fetch('/api/upload-pdf', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    clearInterval(progressInterval);
+                    progressBar.style.width = '100%';
+                    statusText.textContent = 'Complete!';
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    
+                    const data = await response.json();
+                    currentPdfContext = data;
+                    
+                    // Show success
+                    setTimeout(() => {
+                        progressDiv.classList.add('hidden');
+                        document.getElementById('pdfUploadSuccess').classList.remove('hidden');
+                        document.getElementById('chatInput').placeholder = `Ask questions about "${data.filename}"...`;
+                    }, 500);
+                    
+                    console.log('PDF uploaded successfully:', data);
+                    
+                } catch (error) {
+                    clearInterval(progressInterval);
+                    progressDiv.classList.add('hidden');
+                    document.getElementById('pdfUploadError').classList.remove('hidden');
+                    console.error('PDF upload failed:', error);
+                }
+            }
+            
+            // Drag and drop functionality
+            function setupDragAndDrop() {
+                const uploadArea = document.getElementById('pdfUploadArea');
+                const fileInput = document.getElementById('pdfFileInput');
+                
+                uploadArea.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    uploadArea.classList.add('bg-blue-100', 'dark:bg-blue-800/30');
+                });
+                
+                uploadArea.addEventListener('dragleave', (e) => {
+                    e.preventDefault();
+                    uploadArea.classList.remove('bg-blue-100', 'dark:bg-blue-800/30');
+                });
+                
+                uploadArea.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    uploadArea.classList.remove('bg-blue-100', 'dark:bg-blue-800/30');
+                    
+                    const files = e.dataTransfer.files;
+                    if (files.length > 0 && files[0].type === 'application/pdf') {
+                        uploadPdf(files[0]);
+                    } else {
+                        alert('Please upload a PDF file.');
+                    }
+                });
+                
+                fileInput.addEventListener('change', (e) => {
+                    if (e.target.files.length > 0) {
+                        uploadPdf(e.target.files[0]);
+                    }
+                });
+            }
 
-<span class="code-keyword">from</span> opentrons <span class="code-keyword">import</span> protocol_api
+            // Make functions globally accessible
+            window.saveNotes = saveNotes;
+            window.clearNotes = clearNotes;
+            window.selectChartType = selectChartType;
+            window.addDataPoint = addDataPoint;
+            window.loadSampleData = loadSampleData;
+            window.removeDataPoint = removeDataPoint;
+            window.clearAllData = clearAllData;
+            window.generateChart = generateChart;
+            window.clearChart = clearChart;
+            window.downloadChart = downloadChart;
+            window.exportToCSV = exportToCSV;
+            window.exportToJSON = exportToJSON;
+            window.exportToPDF = exportToPDF;
+            window.exportProtocol = exportProtocol;
+            window.exportNotes = exportNotes;
+            window.exportAll = exportAll;
+            window.deleteChat = deleteChat;
+            window.togglePdfUpload = togglePdfUpload;
+            window.clearPdfContext = clearPdfContext;
 
-metadata = {
-    <span class="code-string">'apiLevel'</span>: <span class="code-string">'2.11'</span>,
-    <span class="code-string">'protocolName'</span>: <span class="code-string">'Benzyl Alcohol Synthesis'</span>,
-    <span class="code-string">'author'</span>: <span class="code-string">'Catalyze AI'</span>,
-    <span class="code-string">'description'</span>: <span class="code-string">'Automated synthesis of benzyl alcohol from benzyl chloride'</span>
-}
-
-<span class="code-keyword">def</span> <span class="code-keyword">run</span>(protocol: protocol_api.ProtocolContext):
-    <span class="code-comment"># Labware setup</span>
-    tiprack = protocol.load_labware(<span class="code-string">'opentrons_96_tiprack_300ul'</span>, <span class="code-number">1</span>)
-    plate = protocol.load_labware(<span class="code-string">'corning_96_wellplate_360ul_flat'</span>, <span class="code-number">2</span>)
-    pipette = protocol.load_instrument(<span class="code-string">'p300_single'</span>, <span class="code-string">'right'</span>, tip_racks=[tiprack])
-    
-    <span class="code-comment"># Calculate volumes based on scale</span>
-    benzyl_chloride_vol = <span class="code-number">${benzylChlorideVol}</span>  <span class="code-comment"># μL</span>
-    naoh_vol = <span class="code-number">${naohVol}</span>  <span class="code-comment"># μL</span>
-    
-    <span class="code-comment"># Step 1: Transfer benzyl chloride</span>
-    pipette.pick_up_tip()
-    pipette.transfer(benzyl_chloride_vol, plate[<span class="code-string">'A1'</span>], plate[<span class="code-string">'B1'</span>], new_tip=<span class="code-string">'never'</span>)
-    pipette.drop_tip()
-    
-    <span class="code-comment"># Step 2: Add NaOH solution</span>
-    pipette.pick_up_tip()
-    pipette.transfer(naoh_vol, plate[<span class="code-string">'A2'</span>], plate[<span class="code-string">'B1'</span>], new_tip=<span class="code-string">'never'</span>)
-    pipette.drop_tip()
-    
-    <span class="code-comment"># Step 3: Mix solution</span>
-    pipette.pick_up_tip()
-    pipette.mix(<span class="code-number">5</span>, <span class="code-number">150</span>, plate[<span class="code-string">'B1'</span>])
-    pipette.drop_tip()
-    
-    protocol.comment(<span class="code-string">f"Incubate at {${temp}}°C for {${time}} hours (manual step)"</span>)
-            `;
-        }
-
-        function copyCode() {
-            const codeText = document.getElementById('automationCode').textContent;
-            navigator.clipboard.writeText(codeText).then(() => {
-                showAutoSave('saved');
-                alert('Code copied to clipboard!');
+            // Event listeners
+            sendButton.addEventListener('click', sendMessage);
+            sendButtonProtocol.addEventListener('click', sendMessage);
+            sendButtonAutomate.addEventListener('click', sendMessage);
+            chatInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') sendMessage();
             });
-        }
+            newChatBtn.addEventListener('click', createNewChat);
 
-        function downloadScript() {
-            const codeText = document.getElementById('automationCode').textContent;
-            const blob = new Blob([codeText], { type: 'text/python' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'benzyl_alcohol_synthesis.py';
-            a.click();
-            URL.revokeObjectURL(url);
-        }
-
-        function validateScript() {
-            showAutoSave('saving');
-            setTimeout(() => {
-                showAutoSave('saved');
-                alert('✅ Script validation passed!\n\n• All Opentrons API calls are valid\n• Volume calculations are correct\n• Safety protocols are included\n• Ready for robot execution');
-            }, 1500);
-        }
-
-        // Initialize
-        updateStats();
-        showAutoSave('saved');
+            // Initialize app
+            loadNotes();
+            loadChatHistory();
+            updateStats();
+            setupDragAndDrop();
+            
+            console.log('✅ App initialization complete!');
+        });
     </script>
 </body>
 </html>

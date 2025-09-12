@@ -1,0 +1,17 @@
+[project]
+name = "mit-catalyze"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "flask>=3.1.2",
+    "flask-cors>=6.0.1",
+    "langchain-mcp-adapters>=0.1.9",
+    "langgraph>=0.6.7",
+    "openai>=1.107.1",
+    "pandas>=2.3.2",
+    "python-dotenv>=1.1.1",
+    "requests>=2.32.5",
+    "opentrons>=6.0.0",
+]
