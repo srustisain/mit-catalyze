@@ -1,0 +1,299 @@
+"""
+Chat API Endpoints
+
+Clean API endpoints for chat functionality with agent-based processing.
+"""
+
+import logging
+from typing import Dict, Any, Optional
+from datetime import datetime
+import os
+import base64
+import io
+from openai import OpenAI
+
+from src.pipeline import PipelineManager, ModeProcessor
+
+
+class ChatEndpoints:
+    """Handles chat API endpoints with agent-based processing"""
+    
+    def __init__(self):
+        self.logger = logging.getLogger("catalyze.api")
+        self.pipeline_manager = PipelineManager()
+        self.mode_processor = ModeProcessor()
+        self._initialized = False
+        self.openai_client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+    
+    async def initialize(self):
+        """Initialize the pipeline manager"""
+        if not self._initialized:
+            await self.pipeline_manager.initialize()
+            self._initialized = True
+            self.logger.info("Chat endpoints initialized")
+    
+    async def process_chat_message(self, message: str, mode: str = "research", 
+                                 conversation_history: Optional[list] = None,
+                                 pdf_context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """
+        Process a chat message through the agent pipeline
+        
+        Args:
+            message: The user's message
+            mode: The current mode (research, protocol, automate, safety)
+            conversation_history: Previous conversation messages
+            pdf_context: PDF context if available
+            
+        Returns:
+            Dictionary containing the response and metadata
+        """
+        
+        if not self._initialized:
+            await self.initialize()
+        
+        # Validate and normalize the mode
+        validated_mode = self.mode_processor.validate_mode(mode)
+        
+        # Prepare context
+        context = {
+            "mode": validated_mode.value,
+            "conversation_history": conversation_history or [],
+            "timestamp": datetime.now().isoformat(),
+            "pdf_context": pdf_context
+        }
+        
+        self.logger.info(f"Processing chat message in {validated_mode.value} mode")
+        
+        try:
+            # Process through the pipeline
+            result = await self.pipeline_manager.process_query(
+                query=message,
+                mode=validated_mode.value,
+                context=context
+            )
+            
+            # Format the response
+            response_data = {
+                "response": result.get("response", "No response generated"),
+                "timestamp": result.get("timestamp", datetime.now().isoformat()),
+                "used_mcp": result.get("used_mcp", False),
+                "agent_used": result.get("agent_used", validated_mode.value),
+                "mode": validated_mode.value,
+                "success": result.get("success", True)
+            }
+            
+            # Add error information if present
+            if not result.get("success"):
+                response_data["error"] = result.get("error", "Unknown error")
+            
+            return response_data
+            
+        except Exception as e:
+            self.logger.error(f"Chat processing failed: {e}")
+            return {
+                "response": "Sorry, I encountered an error processing your request. Please try again.",
+                "timestamp": datetime.now().isoformat(),
+                "used_mcp": False,
+                "agent_used": validated_mode.value,
+                "mode": validated_mode.value,
+                "success": False,
+                "error": str(e)
+            }
+    
+    async def get_agent_info(self) -> Dict[str, Any]:
+        """Get information about available agents"""
+        if not self._initialized:
+            await self.initialize()
+        
+        return await self.pipeline_manager.get_agent_capabilities()
+    
+    async def get_pipeline_status(self) -> Dict[str, Any]:
+        """Get pipeline status information"""
+        if not self._initialized:
+            await self.initialize()
+        
+        return self.pipeline_manager.get_status()
+    
+    def validate_request(self, data: Dict[str, Any]) -> tuple[bool, str]:
+        """
+        Validate incoming request data
+        
+        Args:
+            data: Request data dictionary
+            
+        Returns:
+            Tuple of (is_valid, error_message)
+        """
+        
+        if not isinstance(data, dict):
+            return False, "Request data must be a dictionary"
+        
+        if "message" not in data:
+            return False, "Message is required"
+        
+        message = data.get("message", "").strip()
+        if not message:
+            return False, "Message cannot be empty"
+        
+        # Validate mode if provided
+        if "mode" in data:
+            mode = data.get("mode", "research")
+            try:
+                self.mode_processor.validate_mode(mode)
+            except ValueError:
+                return False, f"Invalid mode: {mode}. Must be one of: research, protocol, automate, safety"
+        
+        return True, ""
+    
+    def _extract_pdf_text(self, pdf_path: str) -> str:
+        """
+        Extract text from PDF using available libraries
+        Falls back to different methods if one fails
+        """
+        try:
+            # Try PyMuPDF first (faster and more reliable)
+            return self._extract_with_pymupdf(pdf_path)
+        except ImportError:
+            try:
+                # Try PyPDF2 as fallback
+                return self._extract_with_pypdf2(pdf_path)
+            except ImportError:
+                # If no PDF libraries available, try basic file reading
+                return self._extract_with_basic_reading(pdf_path)
+    
+    def _extract_with_pymupdf(self, pdf_path: str) -> str:
+        """Extract text using PyMuPDF (fitz)"""
+        try:
+            import fitz  # PyMuPDF
+            doc = fitz.open(pdf_path)
+            text = ""
+            for page in doc:
+                text += page.get_text() + "\n"
+            doc.close()
+            return text.strip()
+        except Exception as e:
+            self.logger.error(f"PyMuPDF extraction failed: {e}")
+            raise
+    
+    def _extract_with_pypdf2(self, pdf_path: str) -> str:
+        """Extract text using PyPDF2"""
+        try:
+            import PyPDF2
+            with open(pdf_path, 'rb') as file:
+                reader = PyPDF2.PdfReader(file)
+                text = ""
+                for page in reader.pages:
+                    text += page.extract_text() + "\n"
+            return text.strip()
+        except Exception as e:
+            self.logger.error(f"PyPDF2 extraction failed: {e}")
+            raise
+    
+    def _extract_with_basic_reading(self, pdf_path: str) -> str:
+        """Basic fallback - just read the file (won't work for most PDFs)"""
+        try:
+            with open(pdf_path, 'r', encoding='utf-8', errors='ignore') as file:
+                return file.read()
+        except Exception as e:
+            self.logger.error(f"Basic reading failed: {e}")
+            raise ValueError("No PDF text extraction libraries available. Please install PyMuPDF or PyPDF2.")
+    
+    async def process_pdf(self, pdf_path: str, filename: str) -> Dict[str, Any]:
+        """
+        Process PDF file with OpenAI and extract text content
+        
+        Args:
+            pdf_path: Path to the PDF file
+            filename: Original filename
+            
+        Returns:
+            Dictionary containing processed PDF data
+        """
+        try:
+            self.logger.info(f"Processing PDF: {filename}")
+            
+            # Check if file exists and is readable
+            if not os.path.exists(pdf_path):
+                raise FileNotFoundError(f"PDF file not found: {pdf_path}")
+            
+            # Extract text from PDF using local processing
+            extracted_text = self._extract_pdf_text(pdf_path)
+            
+            if not extracted_text or len(extracted_text.strip()) < 50:
+                raise ValueError("Could not extract meaningful text from PDF. The PDF may be image-only or corrupted.")
+            
+            # Check if OpenAI API key is available
+            if not os.getenv('OPENAI_API_KEY'):
+                raise ValueError("OpenAI API key not configured")
+            
+            # Use OpenAI to analyze the extracted text
+            response = self.openai_client.chat.completions.create(
+                model="gpt-4o",
+                messages=[
+                    {
+                        "role": "system",
+                        "content": "You are a scientific document analyzer. Analyze and summarize the key content from this scientific document. Focus on:\n\n1. **Document Overview**: Title, authors, publication details\n2. **Abstract/Summary**: Main objectives and findings\n3. **Key Methods**: Experimental procedures and techniques\n4. **Results & Data**: Important findings, measurements, observations\n5. **Conclusions**: Main conclusions and implications\n6. **Chemical Information**: Compounds, reactions, molecular structures, properties\n7. **Safety Information**: Hazards, precautions, safety measures\n\nProvide a clear, structured summary that can be referenced when answering questions about this document. Be specific and include relevant numbers, formulas, and technical details."
+                    },
+                    {
+                        "role": "user",
+                        "content": f"Please analyze this scientific document titled '{filename}' and extract the key information:\n\n{extracted_text}"
+                    }
+                ],
+                max_tokens=4000,
+                timeout=60  # 60 second timeout
+            )
+            
+            if not response.choices or not response.choices[0].message.content:
+                raise ValueError("OpenAI returned empty response")
+            
+            extracted_content = response.choices[0].message.content
+            
+            # Validate extracted content
+            if len(extracted_content.strip()) < 50:
+                raise ValueError("Extracted content is too short, PDF may be corrupted or unreadable")
+            
+            # Get file size for context
+            file_size = os.path.getsize(pdf_path)
+            
+            # Create PDF context object
+            pdf_context = {
+                "filename": filename,
+                "content": extracted_content,
+                "upload_time": datetime.now().isoformat(),
+                "file_size": file_size
+            }
+            
+            self.logger.info(f"PDF processed successfully: {len(extracted_content)} characters extracted")
+            
+            return {
+                "success": True,
+                "filename": filename,
+                "content": extracted_content,
+                "file_size": file_size,
+                "timestamp": datetime.now().isoformat()
+            }
+            
+        except FileNotFoundError as e:
+            self.logger.error(f"PDF file not found: {e}")
+            return {
+                "success": False,
+                "error": "PDF file not found",
+                "filename": filename,
+                "timestamp": datetime.now().isoformat()
+            }
+        except ValueError as e:
+            self.logger.error(f"PDF validation error: {e}")
+            return {
+                "success": False,
+                "error": str(e),
+                "filename": filename,
+                "timestamp": datetime.now().isoformat()
+            }
+        except Exception as e:
+            self.logger.error(f"PDF processing failed: {e}")
+            return {
+                "success": False,
+                "error": f"Failed to process PDF: {str(e)}",
+                "filename": filename,
+                "timestamp": datetime.now().isoformat()
+            }

@@ -362,13 +362,13 @@
                 <!-- Right Side - Main Chat Area -->
                 <div class="flex-1">
 
-            <!-- Mode Selection -->
+            <!-- Tab Selection -->
             <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
                 <div class="flex space-x-4">
-                    <button class="mode-btn px-4 py-2 rounded-lg font-medium transition-all button-press text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700" data-mode="research">🔬 Research</button>
-                    <button class="mode-btn px-4 py-2 rounded-lg font-medium transition-all button-press text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700" data-mode="protocol">📋 Protocol</button>
-                    <button class="mode-btn px-4 py-2 rounded-lg font-medium transition-all button-press text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700" data-mode="automate">🤖 Automate</button>
-                    <button class="mode-btn px-4 py-2 rounded-lg font-medium transition-all button-press text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700" data-mode="safety">🛡️ Safety</button>
+                    <button class="tab-mode-btn px-4 py-2 rounded-lg font-medium transition-all button-press scientist-gradient text-white" data-tab-mode="research">🔬 Research</button>
+                    <button class="tab-mode-btn px-4 py-2 rounded-lg font-medium transition-all button-press text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700" data-tab-mode="protocol">📋 Protocol</button>
+                    <button class="tab-mode-btn px-4 py-2 rounded-lg font-medium transition-all button-press text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700" data-tab-mode="automate">🤖 Automate</button>
+                    <button class="tab-mode-btn px-4 py-2 rounded-lg font-medium transition-all button-press text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700" data-tab-mode="export">📤 Export</button>
                 </div>
             </div>
 
@@ -382,15 +382,90 @@
                 </div>
             </div>
 
+            <!-- PDF Upload Area -->
+            <div id="pdfUploadArea" class="px-6 py-4 border-t border-gray-200 dark:border-gray-700" style="display: none;">
+                <div class="bg-blue-50 dark:bg-blue-900/20 border-2 border-dashed border-blue-300 dark:border-blue-600 rounded-lg p-6 text-center">
+                    <div class="text-4xl mb-2">📄</div>
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">Upload Scientific PDF</h3>
+                    <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">Drag and drop your PDF here or click to browse</p>
+                    <input type="file" id="pdfFileInput" accept=".pdf" class="hidden">
+                    <button onclick="document.getElementById('pdfFileInput').click()" class="scientist-gradient text-white px-6 py-2 rounded-lg font-medium hover:opacity-90 transition-all button-press">
+                        Choose PDF File
+                    </button>
+                    <div id="pdfUploadProgress" class="mt-4 hidden">
+                        <div class="bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                            <div id="pdfProgressBar" class="bg-blue-600 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
+                        </div>
+                        <p id="pdfUploadStatus" class="text-sm text-gray-600 dark:text-gray-400 mt-2">Uploading...</p>
+                    </div>
+                    <div id="pdfUploadSuccess" class="mt-4 hidden text-green-600 dark:text-green-400">
+                        ✅ PDF uploaded successfully! You can now ask questions about it.
+                    </div>
+                    <div id="pdfUploadError" class="mt-4 hidden text-red-600 dark:text-red-400">
+                        ❌ Upload failed. Please try again.
+                    </div>
+                </div>
+                <div class="flex justify-between items-center mt-4">
+                    <button onclick="togglePdfUpload()" class="text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 text-sm">
+                        ← Back to chat
+                    </button>
+                    <button onclick="clearPdfContext()" class="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-200 text-sm">
+                        Clear PDF context
+                    </button>
+                </div>
+            </div>
+
             <!-- Chat Input -->
             <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-700">
                 <div class="flex space-x-4">
                     <input type="text" id="chatInput" placeholder="Ask about chemistry, materials, or lab protocols..." 
                            class="input-focus flex-1 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400">
-                    <button id="sendButton" class="scientist-gradient text-white px-6 py-3 rounded-lg font-medium hover:opacity-90 transition-all button-press flex items-center space-x-2">
-                        <span>Send</span>
-                        <span>✈️</span>
-                    </button>
+                    
+                    <!-- Research Tab Buttons -->
+                    <div id="researchButtons" class="flex space-x-4">
+                        <button onclick="togglePdfUpload()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-lg font-medium hover:opacity-90 transition-all button-press flex items-center space-x-2" title="Upload PDF">
+                            <span>📄</span>
+                        </button>
+                        <button id="sendButton" class="scientist-gradient text-white px-6 py-3 rounded-lg font-medium hover:opacity-90 transition-all button-press flex items-center space-x-2">
+                            <span>Send</span>
+                            <span>✈️</span>
+                        </button>
+                    </div>
+                    
+                    <!-- Protocol Tab Buttons -->
+                    <div id="protocolButtons" class="flex space-x-4" style="display: none;">
+                        <button id="automateButton" class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-medium hover:opacity-90 transition-all button-press flex items-center space-x-2">
+                            <span>🤖 Automate</span>
+                        </button>
+                        <button id="sendButtonProtocol" class="scientist-gradient text-white px-6 py-3 rounded-lg font-medium hover:opacity-90 transition-all button-press flex items-center space-x-2">
+                            <span>Send</span>
+                            <span>✈️</span>
+                        </button>
+                    </div>
+                    
+                    <!-- Automate Tab Buttons -->
+                    <div id="automateButtons" class="flex space-x-4" style="display: none;">
+                        <button id="exportButton" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium hover:opacity-90 transition-all button-press flex items-center space-x-2">
+                            <span>📤 Export</span>
+                        </button>
+                        <button id="sendButtonAutomate" class="scientist-gradient text-white px-6 py-3 rounded-lg font-medium hover:opacity-90 transition-all button-press flex items-center space-x-2">
+                            <span>Send</span>
+                            <span>✈️</span>
+                        </button>
+                    </div>
+                    
+                    <!-- Export Tab Buttons -->
+                    <div id="exportButtons" class="flex space-x-4" style="display: none;">
+                        <button id="exportAllButton" class="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg font-medium hover:opacity-90 transition-all button-press flex items-center space-x-2">
+                            <span>📤 Export All</span>
+                        </button>
+                        <button id="exportProtocolButton" class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-medium hover:opacity-90 transition-all button-press flex items-center space-x-2">
+                            <span>📋 Export Protocol</span>
+                        </button>
+                        <button id="exportCodeButton" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium hover:opacity-90 transition-all button-press flex items-center space-x-2">
+                            <span>🤖 Export Code</span>
+                        </button>
+                    </div>
                 </div>
                 </div>
             </div>
@@ -401,6 +476,8 @@
             <div class="scientist-gradient">
                 <nav class="flex space-x-8 px-6">
                     <button class="tab-btn py-4 px-1 border-b-4 border-transparent text-white/80 hover:text-white font-medium transition-all button-press" data-tab="calculator">🧮 Calculator</button>
+                    <button class="tab-btn py-4 px-1 border-b-4 border-transparent text-white/80 hover:text-white font-medium transition-all button-press" data-tab="protocol">📋 Protocol</button>
+                    <button class="tab-btn py-4 px-1 border-b-4 border-transparent text-white/80 hover:text-white font-medium transition-all button-press" data-tab="automate">🤖 Automate</button>
                     <button class="tab-btn py-4 px-1 border-b-4 border-transparent text-white/80 hover:text-white font-medium transition-all button-press" data-tab="notes">📝 Notes</button>
                     <button class="tab-btn py-4 px-1 border-b-4 border-transparent text-white/80 hover:text-white font-medium transition-all button-press" data-tab="data-visualizer">📊 Data Visualizer</button>
                     <button class="tab-btn py-4 px-1 border-b-4 border-transparent text-white/80 hover:text-white font-medium transition-all button-press" data-tab="export">📤 Export</button>
@@ -460,6 +537,37 @@
                             <button onclick="calculateYield()" class="w-full scientist-gradient text-white py-2 px-4 rounded-lg font-medium hover:opacity-90 transition-all button-press">Calculate Yield</button>
                             <div id="yieldResult" class="text-center font-medium text-green-600 dark:text-green-400 hidden"></div>
                         </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Protocol Tab -->
+            <div id="protocol" class="tab-content p-6">
+                <h3 class="text-2xl font-semibold text-gray-900 dark:text-white mb-6">Protocol Generation</h3>
+                <div class="capability-card bg-gray-50 dark:bg-gray-700 rounded-lg p-6">
+                    <div id="protocolContent" class="min-h-64">
+                        <div class="text-center text-gray-500 dark:text-gray-400">
+                            <div class="text-4xl mb-4">📋</div>
+                            <p>Generate a protocol by clicking the Protocol button after your research interaction.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Automate Tab -->
+            <div id="automate" class="tab-content p-6">
+                <h3 class="text-2xl font-semibold text-gray-900 dark:text-white mb-6">Lab Automation</h3>
+                <div class="capability-card bg-gray-50 dark:bg-gray-700 rounded-lg p-6">
+                    <div id="automationContent" class="min-h-64">
+                        <div class="text-center text-gray-500 dark:text-gray-400">
+                            <div class="text-4xl mb-4">🤖</div>
+                            <p>Generate automation code by clicking the Automate button after protocol generation.</p>
+                        </div>
+                    </div>
+                    <div class="mt-4">
+                        <button id="exportButton" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium hover:opacity-90 transition-all button-press flex items-center space-x-2" style="display: none;">
+                            <span>📤 Export</span>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -576,7 +684,9 @@
         let chartData = [];
         let currentChartType = 'scatter';
         let currentChart = null;
-        let currentMode = 'research';
+        let currentTabMode = 'research';  // Current tab: research, protocol, automate, export
+        let currentProtocol = null;  // Store the current protocol
+        let currentAutomationCode = null;  // Store the current automation code
         
         // Chat management variables
         let chatHistory = [];
@@ -592,15 +702,30 @@
             // Get DOM elements
             const tabButtons = document.querySelectorAll('.tab-btn');
             const tabContents = document.querySelectorAll('.tab-content');
-            const modeBtns = document.querySelectorAll('.mode-btn');
+            const tabModeBtns = document.querySelectorAll('.tab-mode-btn');
             const chatInput = document.getElementById('chatInput');
-            const sendButton = document.getElementById('sendButton');
             const chatMessages = document.getElementById('chatMessages');
             const queryCount = document.getElementById('queryCount');
             const protocolCount = document.getElementById('protocolCount');
             const scriptCount = document.getElementById('scriptCount');
             const newChatBtn = document.getElementById('newChatBtn');
             const chatHistoryContainer = document.getElementById('chatHistory');
+            
+            // Button groups
+            const researchButtons = document.getElementById('researchButtons');
+            const protocolButtons = document.getElementById('protocolButtons');
+            const automateButtons = document.getElementById('automateButtons');
+            const exportButtons = document.getElementById('exportButtons');
+            
+            // Individual buttons
+            const sendButton = document.getElementById('sendButton');
+            const sendButtonProtocol = document.getElementById('sendButtonProtocol');
+            const sendButtonAutomate = document.getElementById('sendButtonAutomate');
+            const automateButton = document.getElementById('automateButton');
+            const exportButton = document.getElementById('exportButton');
+            const exportAllButton = document.getElementById('exportAllButton');
+            const exportProtocolButton = document.getElementById('exportProtocolButton');
+            const exportCodeButton = document.getElementById('exportCodeButton');
             
             // Theme management
             const themeToggle = document.getElementById('themeToggle');
@@ -669,29 +794,272 @@
                 });
             });
 
-            // Mode switching
-            // Set Research as default active mode
-            const researchBtn = document.querySelector('[data-mode="research"]');
-            if (researchBtn) {
-                researchBtn.classList.add('active');
-                researchBtn.classList.remove('text-gray-600', 'dark:text-gray-400', 'hover:bg-gray-100', 'dark:hover:bg-gray-700');
-                researchBtn.classList.add('scientist-gradient', 'text-white');
-                currentMode = 'research';
-            }
-            
-            modeBtns.forEach(btn => {
+            // Tab Mode switching
+            tabModeBtns.forEach(btn => {
                 btn.addEventListener('click', () => {
-                    modeBtns.forEach(b => {
-                        b.classList.remove('active');
-                        b.classList.remove('scientist-gradient', 'text-white');
-                        b.classList.add('text-gray-600', 'dark:text-gray-400', 'hover:bg-gray-100', 'dark:hover:bg-gray-700');
-                    });
-                    btn.classList.add('active');
-                    btn.classList.remove('text-gray-600', 'dark:text-gray-400', 'hover:bg-gray-100', 'dark:hover:bg-gray-700');
-                    btn.classList.add('scientist-gradient', 'text-white');
-                    currentMode = btn.getAttribute('data-mode');
+                    const newTabMode = btn.getAttribute('data-tab-mode');
+                    switchTabMode(newTabMode);
                 });
             });
+            
+            // Function to switch tab mode and update UI
+            function switchTabMode(tabMode) {
+                currentTabMode = tabMode;
+                
+                // Update tab mode buttons
+                tabModeBtns.forEach(b => {
+                    b.classList.remove('active');
+                    b.classList.remove('scientist-gradient', 'text-white');
+                    b.classList.add('text-gray-600', 'dark:text-gray-400', 'hover:bg-gray-100', 'dark:hover:bg-gray-700');
+                });
+                
+                const activeBtn = document.querySelector(`[data-tab-mode="${tabMode}"]`);
+                if (activeBtn) {
+                    activeBtn.classList.add('active');
+                    activeBtn.classList.remove('text-gray-600', 'dark:text-gray-400', 'hover:bg-gray-100', 'dark:hover:bg-gray-700');
+                    activeBtn.classList.add('scientist-gradient', 'text-white');
+                }
+                
+                // Show/hide button groups
+                researchButtons.style.display = 'none';
+                protocolButtons.style.display = 'none';
+                automateButtons.style.display = 'none';
+                exportButtons.style.display = 'none';
+                
+                switch(tabMode) {
+                    case 'research':
+                        researchButtons.style.display = 'flex';
+                        break;
+                    case 'protocol':
+                        protocolButtons.style.display = 'flex';
+                        break;
+                    case 'automate':
+                        automateButtons.style.display = 'flex';
+                        // Auto-generate code when switching to automate tab
+                        if (currentProtocol && !currentAutomationCode) {
+                            generateAutomationCode();
+                        }
+                        break;
+                    case 'export':
+                        exportButtons.style.display = 'flex';
+                        break;
+                }
+                
+                // Update chat input placeholder
+                updateChatPlaceholder(tabMode);
+            }
+            
+            // Update chat input placeholder based on tab mode
+            function updateChatPlaceholder(tabMode) {
+                const placeholders = {
+                    'research': 'Ask about chemistry, materials, or lab protocols...',
+                    'protocol': 'Refine or ask questions about the protocol...',
+                    'automate': 'Ask questions about the automation code...',
+                    'export': 'Enter any additional notes for export...'
+                };
+                chatInput.placeholder = placeholders[tabMode] || 'Enter your message...';
+            }
+
+            // Helper function to switch tabs
+            function switchToTab(tabId) {
+                // Remove active class from all tabs and contents
+                tabButtons.forEach(btn => {
+                    btn.classList.remove('active');
+                    btn.classList.remove('border-white', 'text-white');
+                    btn.classList.add('border-transparent', 'text-white/80');
+                });
+                tabContents.forEach(content => content.classList.remove('active'));
+                
+                // Add active class to target tab and content
+                const targetTab = document.querySelector(`[data-tab="${tabId}"]`);
+                const targetContent = document.getElementById(tabId);
+                
+                if (targetTab && targetContent) {
+                    targetTab.classList.add('active');
+                    targetTab.classList.remove('border-transparent', 'text-white/80');
+                    targetTab.classList.add('border-white', 'text-white');
+                    targetContent.classList.add('active');
+                }
+            }
+
+            // Generate Protocol from Research
+            async function generateProtocolFromResearch() {
+                const protocolContent = document.getElementById('protocolContent');
+                protocolContent.innerHTML = '<div class="text-center"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto"></div><p class="mt-2">Generating protocol...</p></div>';
+                
+                try {
+                    // Get the last research message
+                    const chat = chatHistory.find(c => c.id === currentChatId);
+                    if (!chat || chat.messages.length === 0) {
+                        throw new Error('No research data available');
+                    }
+                    
+                    const lastUserMessage = chat.messages.filter(m => m.isUser).pop();
+                    if (!lastUserMessage) {
+                        throw new Error('No user research input found');
+                    }
+                    
+                    const protocolPrompt = `Generate a detailed laboratory protocol based on this research request: ${lastUserMessage.content}`;
+                    
+                    const response = await fetch('/api/chat', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            message: protocolPrompt,
+                            mode: 'protocol',
+                            conversation_history: []
+                        })
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    
+                    const data = await response.json();
+                    
+                    // Update protocol content
+                    protocolContent.innerHTML = `
+                        <div class="mb-4">
+                            <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">Generated Protocol</h4>
+                            <div class="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-600">
+                                <pre class="whitespace-pre-wrap text-sm text-gray-900 dark:text-white">${data.response}</pre>
+                            </div>
+                        </div>
+                    `;
+                    
+                    // Store protocol for automation
+                    currentProtocol = data.response;
+                    
+                } catch (error) {
+                    console.error('Error generating protocol:', error);
+                    protocolContent.innerHTML = `
+                        <div class="text-center text-red-600 dark:text-red-400">
+                            <p>Error generating protocol: ${error.message}</p>
+                        </div>
+                    `;
+                }
+            }
+
+            // Generate Automation Code
+            async function generateAutomationCode() {
+                const automationContent = document.getElementById('automationContent');
+                automationContent.innerHTML = '<div class="text-center"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mx-auto"></div><p class="mt-2">Generating automation code...</p></div>';
+                
+                try {
+                    if (!currentProtocol) {
+                        throw new Error('No protocol available for automation');
+                    }
+                    
+                    const automationPrompt = `Generate Python automation code for this protocol: ${currentProtocol}`;
+                    
+                    const response = await fetch('/api/chat', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            message: automationPrompt,
+                            mode: 'automate',
+                            conversation_history: []
+                        })
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    
+                    const data = await response.json();
+                    
+                    // Store automation code
+                    currentAutomationCode = data.response;
+                    
+                    // Update automation content
+                    automationContent.innerHTML = `
+                        <div class="mb-4">
+                            <h4 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">Generated Automation Code</h4>
+                            <div class="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-600">
+                                <pre class="whitespace-pre-wrap text-sm text-gray-900 dark:text-white overflow-x-auto">${data.response}</pre>
+                            </div>
+                        </div>
+                    `;
+                    
+                } catch (error) {
+                    console.error('Error generating automation code:', error);
+                    automationContent.innerHTML = `
+                        <div class="text-center text-red-600 dark:text-red-400">
+                            <p>Error generating automation code: ${error.message}</p>
+                        </div>
+                    `;
+                }
+            }
+            
+            // Button Event Listeners
+            automateButton.addEventListener('click', () => {
+                switchTabMode('automate');
+            });
+            
+            exportButton.addEventListener('click', () => {
+                switchTabMode('export');
+            });
+            
+            // Export button handlers
+            exportAllButton.addEventListener('click', () => {
+                exportAllData();
+            });
+            
+            exportProtocolButton.addEventListener('click', () => {
+                exportProtocolData();
+            });
+            
+            exportCodeButton.addEventListener('click', () => {
+                exportCodeData();
+            });
+            
+            // Export functions
+            function exportAllData() {
+                const data = {
+                    protocol: currentProtocol,
+                    automationCode: currentAutomationCode,
+                    timestamp: new Date().toISOString()
+                };
+                
+                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                const url = window.URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `catalyze_export_${Date.now()}.json`;
+                link.click();
+            }
+            
+            function exportProtocolData() {
+                if (!currentProtocol) {
+                    alert('No protocol to export');
+                    return;
+                }
+                
+                const blob = new Blob([currentProtocol], { type: 'text/plain' });
+                const url = window.URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `protocol_${Date.now()}.txt`;
+                link.click();
+            }
+            
+            function exportCodeData() {
+                if (!currentAutomationCode) {
+                    alert('No automation code to export');
+                    return;
+                }
+                
+                const blob = new Blob([currentAutomationCode], { type: 'text/plain' });
+                const url = window.URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `automation_code_${Date.now()}.py`;
+                link.click();
+            }
 
             // Chat management functions
             function createNewChat() {
@@ -708,6 +1076,14 @@
                 
                 chatHistory.unshift(newChat);
                 currentChatId = chatId;
+                
+                // Reset workflow state
+                currentTabMode = 'research';
+                currentProtocol = null;
+                currentAutomationCode = null;
+                
+                // Reset to research tab
+                switchTabMode('research');
                 
                 // Clear current chat messages
                 chatMessages.innerHTML = `
@@ -875,16 +1251,34 @@
                             content: msg.content
                         })) : [];
                         
+                        // Determine the mode based on current tab
+                        let mode = 'research';
+                        if (currentTabMode === 'protocol') {
+                            mode = 'protocol';
+                        } else if (currentTabMode === 'automate') {
+                            mode = 'automate';
+                        } else if (currentTabMode === 'export') {
+                            mode = 'research'; // Export tab uses research mode for chat
+                        }
+                        
                         // Call the chat API
+                        const requestBody = {
+                            message: message,
+                            mode: mode,
+                            conversation_history: conversationHistory
+                        };
+                        
+                        // Add PDF context if available
+                        if (currentPdfContext) {
+                            requestBody.pdf_context = currentPdfContext;
+                        }
+                        
                         const response = await fetch('/api/chat', {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',
                             },
-                            body: JSON.stringify({
-                                message: message,
-                                conversation_history: conversationHistory
-                            })
+                            body: JSON.stringify(requestBody)
                         });
                         
                         if (!response.ok) {
@@ -899,8 +1293,24 @@
                             loadingElement.remove();
                         }
                         
-                        // Add the LLM response
-                        addMessage(data.response || "I've processed your request successfully!");
+                        // Add the LLM response with agent info
+                        const agentInfo = data.agent_used ? ` (via ${data.agent_used} agent)` : '';
+                        const pdfInfo = currentPdfContext ? ` 📄 (analyzing "${currentPdfContext.filename}")` : '';
+                        addMessage(data.response || "I've processed your request successfully!" + agentInfo + pdfInfo);
+                        
+                        // Handle different tab modes
+                        if (currentTabMode === 'research') {
+                            // Store research data for protocol generation
+                            console.log('Research completed');
+                        } else if (currentTabMode === 'protocol') {
+                            // Store protocol data
+                            currentProtocol = data.response;
+                            console.log('Protocol generated');
+                        } else if (currentTabMode === 'automate') {
+                            // Store automation code
+                            currentAutomationCode = data.response;
+                            console.log('Automation code generated');
+                        }
                         
                     } catch (error) {
                         console.error('Error calling API:', error);
@@ -914,6 +1324,47 @@
                         // Show error message
                         addMessage("Sorry, I encountered an error processing your request. Please try again.");
                     }
+                }
+            }
+
+
+            // Generate Safety Information for Protocol
+            async function generateSafetyForProtocol(protocolText) {
+                try {
+                    // Generate safety analysis for the protocol
+                    const safetyPrompt = `Analyze the safety hazards and provide safety information for this protocol: ${protocolText}`;
+                    
+                    // Get conversation history for context
+                    const chat = chatHistory.find(c => c.id === currentChatId);
+                    const conversationHistory = chat ? chat.messages.map(msg => ({
+                        role: msg.isUser ? "user" : "assistant",
+                        content: msg.content
+                    })) : [];
+                    
+                    // Call the chat API with safety mode
+                    const response = await fetch('/api/chat', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            message: safetyPrompt,
+                            mode: 'safety',
+                            conversation_history: conversationHistory
+                        })
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    
+                    const data = await response.json();
+                    
+                    // Update safety tab with the safety information
+                    updateSafetyData(data.response);
+                    
+                } catch (error) {
+                    console.error('Error generating safety information:', error);
                 }
             }
 
@@ -934,6 +1385,13 @@
             }
 
             function updateProtocolData(protocol) {
+                // Store the current protocol
+                currentProtocol = protocol;
+                workflowState = 'protocol_generated';
+                
+                // Show the automate button
+                automateButton.style.display = 'flex';
+                
                 // Update the protocol tab with the data from API
                 const protocolTab = document.getElementById('protocol');
                 if (protocolTab && protocol) {
@@ -945,17 +1403,30 @@
                 }
             }
 
-            function updateAutomationData(automationScript) {
-                // Update the automation tab with the script from API
+            function updateAutomationData(automationCode) {
+                // Update the automation tab with the generated code
                 const automationTab = document.getElementById('automation');
-                if (automationTab && automationScript) {
-                    let html = '<h3 class="text-lg font-semibold mb-4">Generated Automation Script</h3>';
+                if (automationTab && automationCode) {
+                    let html = '<h3 class="text-lg font-semibold mb-4">Generated Automation Code</h3>';
                     html += `<div class="mb-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                        <pre class="text-sm"><code class="language-python">${automationScript}</code></pre>
+                        <pre class="text-sm overflow-x-auto">${automationCode}</pre>
                     </div>`;
                     automationTab.innerHTML = html;
                 }
             }
+
+            function updateSafetyData(safetyInfo) {
+                // Update the safety tab with the safety information
+                const safetyTab = document.getElementById('safety');
+                if (safetyTab && safetyInfo) {
+                    let html = '<h3 class="text-lg font-semibold mb-4">Safety Analysis</h3>';
+                    html += `<div class="mb-4 p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
+                        <div class="text-sm">${safetyInfo}</div>
+                    </div>`;
+                    safetyTab.innerHTML = html;
+                }
+            }
+
 
             // Calculator functions
             function calculateMolarity() {
@@ -1215,6 +1686,122 @@
                 alert('Export all feature coming soon!');
             }
 
+            // PDF Upload Functions
+            let currentPdfContext = null;
+            
+            function togglePdfUpload() {
+                const uploadArea = document.getElementById('pdfUploadArea');
+                const chatInput = document.getElementById('chatInput');
+                
+                if (uploadArea.style.display === 'none') {
+                    uploadArea.style.display = 'block';
+                    chatInput.placeholder = 'Upload a PDF first, then ask questions about it...';
+                } else {
+                    uploadArea.style.display = 'none';
+                    chatInput.placeholder = 'Ask about chemistry, materials, or lab protocols...';
+                }
+            }
+            
+            function clearPdfContext() {
+                currentPdfContext = null;
+                document.getElementById('pdfFileInput').value = '';
+                document.getElementById('pdfUploadSuccess').classList.add('hidden');
+                document.getElementById('pdfUploadError').classList.add('hidden');
+                document.getElementById('pdfUploadProgress').classList.add('hidden');
+                document.getElementById('chatInput').placeholder = 'Ask about chemistry, materials, or lab protocols...';
+                console.log('PDF context cleared');
+            }
+            
+            async function uploadPdf(file) {
+                const formData = new FormData();
+                formData.append('pdf', file);
+                
+                // Show progress
+                const progressDiv = document.getElementById('pdfUploadProgress');
+                const progressBar = document.getElementById('pdfProgressBar');
+                const statusText = document.getElementById('pdfUploadStatus');
+                
+                progressDiv.classList.remove('hidden');
+                document.getElementById('pdfUploadSuccess').classList.add('hidden');
+                document.getElementById('pdfUploadError').classList.add('hidden');
+                
+                try {
+                    // Simulate progress
+                    let progress = 0;
+                    const progressInterval = setInterval(() => {
+                        progress += Math.random() * 30;
+                        if (progress > 90) progress = 90;
+                        progressBar.style.width = progress + '%';
+                        statusText.textContent = progress < 50 ? 'Uploading PDF...' : 'Processing PDF...';
+                    }, 200);
+                    
+                    const response = await fetch('/api/upload-pdf', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    clearInterval(progressInterval);
+                    progressBar.style.width = '100%';
+                    statusText.textContent = 'Complete!';
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    
+                    const data = await response.json();
+                    currentPdfContext = data;
+                    
+                    // Show success
+                    setTimeout(() => {
+                        progressDiv.classList.add('hidden');
+                        document.getElementById('pdfUploadSuccess').classList.remove('hidden');
+                        document.getElementById('chatInput').placeholder = `Ask questions about "${data.filename}"...`;
+                    }, 500);
+                    
+                    console.log('PDF uploaded successfully:', data);
+                    
+                } catch (error) {
+                    clearInterval(progressInterval);
+                    progressDiv.classList.add('hidden');
+                    document.getElementById('pdfUploadError').classList.remove('hidden');
+                    console.error('PDF upload failed:', error);
+                }
+            }
+            
+            // Drag and drop functionality
+            function setupDragAndDrop() {
+                const uploadArea = document.getElementById('pdfUploadArea');
+                const fileInput = document.getElementById('pdfFileInput');
+                
+                uploadArea.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    uploadArea.classList.add('bg-blue-100', 'dark:bg-blue-800/30');
+                });
+                
+                uploadArea.addEventListener('dragleave', (e) => {
+                    e.preventDefault();
+                    uploadArea.classList.remove('bg-blue-100', 'dark:bg-blue-800/30');
+                });
+                
+                uploadArea.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    uploadArea.classList.remove('bg-blue-100', 'dark:bg-blue-800/30');
+                    
+                    const files = e.dataTransfer.files;
+                    if (files.length > 0 && files[0].type === 'application/pdf') {
+                        uploadPdf(files[0]);
+                    } else {
+                        alert('Please upload a PDF file.');
+                    }
+                });
+                
+                fileInput.addEventListener('change', (e) => {
+                    if (e.target.files.length > 0) {
+                        uploadPdf(e.target.files[0]);
+                    }
+                });
+            }
+
             // Make functions globally accessible
             window.calculateMolarity = calculateMolarity;
             window.calculatePH = calculatePH;
@@ -1236,9 +1823,13 @@
             window.exportNotes = exportNotes;
             window.exportAll = exportAll;
             window.deleteChat = deleteChat;
+            window.togglePdfUpload = togglePdfUpload;
+            window.clearPdfContext = clearPdfContext;
 
             // Event listeners
             sendButton.addEventListener('click', sendMessage);
+            sendButtonProtocol.addEventListener('click', sendMessage);
+            sendButtonAutomate.addEventListener('click', sendMessage);
             chatInput.addEventListener('keypress', (e) => {
                 if (e.key === 'Enter') sendMessage();
             });
@@ -1248,6 +1839,7 @@
             loadNotes();
             loadChatHistory();
             updateStats();
+            setupDragAndDrop();
             
             console.log('✅ App initialization complete!');
         });

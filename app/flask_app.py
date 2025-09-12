@@ -7,15 +7,23 @@ from flask_cors import CORS
 from typing import Dict, List
 import json
 from datetime import datetime
-import re
+import asyncio
+import logging
+import os
+import tempfile
+from werkzeug.utils import secure_filename
 
-from src.pipeline import run_pipeline
+from src.api import ChatEndpoints
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("catalyze.flask")
 
 app = Flask(__name__, static_folder='../react-build', static_url_path='')
 CORS(app)
 
-# In-memory storage for conversation history (in production, use a database)
-conversation_history = []
+# Initialize chat endpoints
+chat_endpoints = ChatEndpoints()
 
 @app.route('/')
 def serve_react_app():
@@ -33,211 +41,150 @@ def health_check():
 
 @app.route('/api/chat', methods=['POST'])
 def chat_with_llm():
-    """Chat with LLM using OpenAI + ChEMBL MCP Server"""
+    """Chat with LLM using agent-based processing"""
     try:
         data = request.get_json()
+        
+        # Validate request
+        is_valid, error_msg = chat_endpoints.validate_request(data)
+        if not is_valid:
+            return jsonify({'error': error_msg}), 400
+        
         message = data.get('message', '').strip()
+        mode = data.get('mode', 'research')  # Get mode from frontend
         conversation_history = data.get('conversation_history', [])
-
-        if not message:
-            return jsonify({'error': 'Message is required'}), 400
-
-        # Check if this is a chemistry-related question that should use MCP
-        chemistry_keywords = [
-            'molecular weight', 'compound', 'chemical', 'drug', 'molecule',
-            'aspirin', 'caffeine', 'ibuprofen', 'target', 'receptor',
-            'bioactivity', 'admet', 'solubility', 'pharmacology',
-            'synthesis', 'reaction', 'mechanism', 'pathway'
-        ]
+        pdf_context = data.get('pdf_context', None)  # Get PDF context if available
         
-        message_lower = message.lower()
-        is_chemistry_question = any(keyword in message_lower for keyword in chemistry_keywords)
+        logger.info(f"Processing chat message in {mode} mode: {message[:50]}...")
         
-        if is_chemistry_question:
-            # Use hybrid approach: OpenAI + ChEMBL MCP
-            print(f"🧪 Chemistry question detected: {message}")
-            
-            # First, get OpenAI response
-            from src.clients.llm_client import LLMClient
-            llm_client = LLMClient(provider="openai")
-            openai_response = llm_client.generate_chat_response(message, conversation_history)
-            print(f"✅ OpenAI response generated: {len(openai_response)} characters")
-            
-            # Then try to enhance with ChEMBL data
-            chembl_enhancement = ""
-            try:
-                from src.pipeline import run_pipeline
-                print("🔍 Attempting ChEMBL MCP integration...")
-                
-                # Run the MCP pipeline
-                result = run_pipeline(message, explain_mode=True)
-                print(f"📊 MCP result keys: {list(result.keys())}")
-                
-                # Extract ChEMBL data
-                enhancement_parts = []
-                
-                if result.get('chemicals') and len(result['chemicals']) > 0:
-                    chemicals = result['chemicals']
-                    enhancement_parts.append(f"ChEMBL Database: Found {len(chemicals)} chemicals: {', '.join(chemicals)}")
-                    print(f"🧪 Found chemicals: {chemicals}")
-                
-                if result.get('chemical_data'):
-                    for chem, data in result['chemical_data'].items():
-                        if data.get('molecular_weight'):
-                            enhancement_parts.append(f"ChEMBL Data: {chem} molecular weight = {data['molecular_weight']} g/mol")
-                            print(f"⚖️  {chem} MW: {data['molecular_weight']} g/mol")
-                        if data.get('formula'):
-                            enhancement_parts.append(f"ChEMBL Data: {chem} formula = {data['formula']}")
-                            print(f"🧬 {chem} formula: {data['formula']}")
-                
-                if result.get('protocol') and result['protocol']:
-                    protocol = result['protocol']
-                    if protocol.get('title'):
-                        enhancement_parts.append(f"ChEMBL Protocol: {protocol['title']}")
-                        print(f"📋 Protocol: {protocol['title']}")
-                
-                if enhancement_parts:
-                    chembl_enhancement = "\n\n**Additional ChEMBL Database Information:**\n" + "\n".join(enhancement_parts)
-                    print(f"✅ ChEMBL enhancement added: {len(chembl_enhancement)} characters")
-                else:
-                    print("⚠️  No ChEMBL data extracted")
-                
-            except Exception as mcp_error:
-                print(f"❌ MCP pipeline error: {mcp_error}")
-                chembl_enhancement = "\n\n(Note: ChEMBL database access temporarily unavailable)"
-            
-            # Combine OpenAI response with ChEMBL enhancement
-            response = openai_response + chembl_enhancement
-            print(f"🎯 Final response length: {len(response)} characters")
-        else:
-            # Use basic LLM for non-chemistry questions
-            from src.clients.llm_client import LLMClient
-            llm_client = LLMClient(provider="openai")
-            response = llm_client.generate_chat_response(message, conversation_history)
+        # Process the message asynchronously
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
         
+        try:
+            result = loop.run_until_complete(
+                chat_endpoints.process_chat_message(
+                    message=message,
+                    mode=mode,
+                    conversation_history=conversation_history,
+                    pdf_context=pdf_context
+                )
+            )
+            
+            logger.info(f"Chat processed successfully by {result.get('agent_used', 'unknown')} agent")
+            
+            return jsonify({
+                'response': result.get('response', 'No response generated'),
+                'timestamp': result.get('timestamp', datetime.now().isoformat()),
+                'used_mcp': result.get('used_mcp', False),
+                'agent_used': result.get('agent_used', mode),
+                'mode': result.get('mode', mode),
+                'success': result.get('success', True)
+            })
+            
+        finally:
+            loop.close()
+            
+    except Exception as e:
+        logger.error(f"Chat endpoint error: {e}")
         return jsonify({
-            'response': response,
+            'error': f'Error processing chat: {str(e)}',
+            'response': 'Sorry, I encountered an error processing your request. Please try again.',
             'timestamp': datetime.now().isoformat(),
-            'used_mcp': is_chemistry_question
-        })
+            'success': False
+        }), 500
 
-    except Exception as e:
-        return jsonify({'error': f'Error processing chat: {str(e)}'}), 500
-
-@app.route('/api/query', methods=['POST'])
-def process_chemistry_query():
-    """Process a chemistry query and return results"""
+@app.route('/api/agents', methods=['GET'])
+def get_agents():
+    """Get information about available agents"""
     try:
-        data = request.get_json()
-        query = data.get('query', '').strip()
-        explain_mode = data.get('explain_mode', False)
-
-        if not query:
-            return jsonify({'error': 'Query is required'}), 400
-
-        # Delegate the entire workflow to the new LangGraph‑based pipeline.
-        # The pipeline handles chemical extraction, PubChem lookup,
-        # MCP tool orchestration, automation script generation, and
-        # response assembly.
-        response = run_pipeline(query, explain_mode=explain_mode)
-
-        return jsonify(response)
-
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        
+        try:
+            agents_info = loop.run_until_complete(chat_endpoints.get_agent_info())
+            return jsonify(agents_info)
+        finally:
+            loop.close()
+            
     except Exception as e:
-        return jsonify({'error': f'Error processing query: {str(e)}'}), 500
+        logger.error(f"Agents endpoint error: {e}")
+        return jsonify({'error': str(e)}), 500
 
-@app.route('/api/history', methods=['GET'])
-def get_conversation_history():
-    """Get conversation history"""
-    return jsonify({
-        'history': conversation_history,
-        'total': len(conversation_history)
-    })
-
-@app.route('/api/history/<int:history_id>', methods=['GET'])
-def get_specific_conversation(history_id):
-    """Get a specific conversation by ID"""
-    for conv in conversation_history:
-        if conv['id'] == history_id:
-            return jsonify(conv)
-    return jsonify({'error': 'Conversation not found'}), 404
-
-@app.route('/api/clear-history', methods=['POST'])
-def clear_conversation_history():
-    """Clear conversation history"""
-    global conversation_history
-    conversation_history = []
-    return jsonify({'message': 'History cleared successfully'})
-
-@app.route('/api/demo-queries', methods=['GET'])
-def get_demo_queries():
-    """Get demo queries for the frontend"""
-    return jsonify({
-        'queries': [
-            {
-                'id': 1,
-                'query': 'Synthesize benzyl alcohol from benzyl chloride',
-                'description': 'Classic SN2 substitution reaction',
-                'category': 'synthesis'
-            },
-            {
-                'id': 2,
-                'query': 'Which solid electrolytes are stable above 60°C?',
-                'description': 'Materials science query',
-                'category': 'materials'
-            },
-            {
-                'id': 3,
-                'query': 'Top perovskites with band gap 1.3-1.7 eV',
-                'description': 'Photovoltaic materials',
-                'category': 'materials'
-            },
-            {
-                'id': 4,
-                'query': 'Greener solvent replacements for DMF',
-                'description': 'Green chemistry focus',
-                'category': 'green_chemistry'
-            }
-        ]
-    })
-
-@app.route('/api/download-script', methods=['POST'])
-def download_automation_script():
-    """Generate and return automation script for download"""
+@app.route('/api/status', methods=['GET'])
+def get_status():
+    """Get pipeline status"""
     try:
-        data = request.get_json()
-        script_content = data.get('script', '')
-        filename = data.get('filename', 'catalyze_protocol.py')
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
         
-        if not script_content:
-            return jsonify({'error': 'Script content is required'}), 400
-        
-        return jsonify({
-            'script': script_content,
-            'filename': filename,
-            'mime_type': 'text/python'
-        })
-        
+        try:
+            status = loop.run_until_complete(chat_endpoints.get_pipeline_status())
+            return jsonify(status)
+        finally:
+            loop.close()
+            
     except Exception as e:
-        return jsonify({'error': f'Error generating script: {str(e)}'}), 500
+        logger.error(f"Status endpoint error: {e}")
+        return jsonify({'error': str(e)}), 500
 
-@app.errorhandler(404)
-def not_found(error):
-    """Handle 404 errors for React routing"""
-    return send_from_directory(app.static_folder, 'index.html')
+@app.route('/api/upload-pdf', methods=['POST'])
+def upload_pdf():
+    """Upload and process PDF files"""
+    try:
+        if 'pdf' not in request.files:
+            return jsonify({'error': 'No PDF file provided'}), 400
+        
+        file = request.files['pdf']
+        if file.filename == '':
+            return jsonify({'error': 'No file selected'}), 400
+        
+        if not file.filename.lower().endswith('.pdf'):
+            return jsonify({'error': 'File must be a PDF'}), 400
+        
+        # Check file size (limit to 10MB)
+        file.seek(0, 2)  # Seek to end
+        file_size = file.tell()
+        file.seek(0)  # Reset to beginning
+        
+        if file_size > 10 * 1024 * 1024:  # 10MB limit
+            return jsonify({'error': 'File size must be less than 10MB'}), 400
+        
+        # Create temporary file
+        filename = secure_filename(file.filename)
+        temp_dir = tempfile.mkdtemp()
+        temp_path = os.path.join(temp_dir, filename)
+        file.save(temp_path)
+        
+        logger.info(f"PDF uploaded: {filename}")
+        
+        # Process PDF with OpenAI
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        
+        try:
+            result = loop.run_until_complete(
+                chat_endpoints.process_pdf(temp_path, filename)
+            )
+            
+            # Clean up temporary file
+            os.remove(temp_path)
+            os.rmdir(temp_dir)
+            
+            return jsonify(result)
+        finally:
+            loop.close()
+            
+    except Exception as e:
+        logger.error(f"PDF upload error: {e}")
+        return jsonify({'error': f'Failed to process PDF: {str(e)}'}), 500
 
-@app.errorhandler(500)
-def internal_error(error):
-    """Handle 500 errors"""
-    return jsonify({'error': 'Internal server error'}), 500
+# Serve static files
+@app.route('/<path:path>')
+def serve_static(path):
+    """Serve static files"""
+    return send_from_directory(app.static_folder, path)
 
 if __name__ == '__main__':
-    # Create react-build directory if it doesn't exist
-    if not os.path.exists('react-build'):
-        os.makedirs('react-build')
-    
-    app.run(
-        host='0.0.0.0',
-        port=5003,
-        debug=True
-    )
+    logger.info("Starting Catalyze Flask application...")
+    app.run(debug=True, host='0.0.0.0', port=5003)
