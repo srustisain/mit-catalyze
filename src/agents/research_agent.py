@@ -68,17 +68,12 @@ class ResearchAgent(BaseAgent):
                 agent_result = await self._run_agent_safely(enhanced_query, context)
                 
                 if agent_result.get("success"):
-                    # Extract the response content
-                    messages = agent_result.get("response", [])
-                    response_content = ""
-                    
-                    for message in messages:
-                        if hasattr(message, 'content') and message.content:
-                            response_content += message.content + "\n"
+                    # Response is already extracted as string from _run_agent_safely
+                    response_content = agent_result.get("response", "")
                     
                     return {
                         "success": True,
-                        "response": response_content.strip(),
+                        "response": response_content,
                         "agent": self.name,
                         "used_mcp": True,
                         "timestamp": self._get_timestamp()

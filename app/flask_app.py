@@ -196,4 +196,17 @@ def serve_static(path):
 
 if __name__ == '__main__':
     logger.info("Starting Catalyze Flask application...")
+    
+    # Pre-initialize all agents at startup to reduce per-query latency
+    logger.info("Pre-initializing agents...")
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    try:
+        loop.run_until_complete(chat_endpoints.initialize())
+        logger.info("✓ All agents pre-initialized and ready")
+    except Exception as e:
+        logger.error(f"Agent initialization failed: {e}")
+    finally:
+        loop.close()
+    
     app.run(debug=True, host='0.0.0.0', port=5003)

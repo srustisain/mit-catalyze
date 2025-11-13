@@ -80,23 +80,18 @@ Make it detailed, safe, and reproducible for laboratory use.
                 agent_result = await self._run_agent_safely(protocol_prompt, context)
                 
                 if agent_result.get("success"):
-                    # Extract the response content
-                    messages = agent_result.get("response", [])
-                    response_content = ""
-                    
-                    for message in messages:
-                        if hasattr(message, 'content') and message.content:
-                            response_content += message.content + "\n"
+                    # Response is already extracted as string from _run_agent_safely
+                    response_content = agent_result.get("response", "")
                     
                     # Store protocol for automation
                     protocol_data = {
-                        "protocol_text": response_content.strip(),
+                        "protocol_text": response_content,
                         "timestamp": self._get_timestamp()
                     }
                     
                     return {
                         "success": True,
-                        "response": response_content.strip(),
+                        "response": response_content,
                         "agent": self.name,
                         "used_mcp": True,
                         "protocol_data": protocol_data,

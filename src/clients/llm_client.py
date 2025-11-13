@@ -32,9 +32,13 @@ class LLMClient:
         self.cerebras_key = CEREBRAS_API_KEY
         self.huggingface_key = HUGGINGFACE_API_KEY
         
-        # Initialize OpenAI client if key is available
+        # Initialize OpenAI client with proper retry and timeout settings
         if self.openai_key:
-            self.openai_client = OpenAI(api_key=self.openai_key)
+            self.openai_client = OpenAI(
+                api_key=self.openai_key,
+                max_retries=3,  # Retry up to 3 times on transient errors
+                timeout=30.0    # 30 second timeout per request
+            )
         else:
             self.openai_client = None
     

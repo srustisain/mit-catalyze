@@ -14,9 +14,11 @@ from typing import Any, Dict, List, Optional
 from datetime import datetime
 
 from src.clients.llm_client import LLMClient
-from src.config.config import OPENAI_MODEL, MCP_SERVERS, LANGFUSE_ENABLED
+from src.config.config import OPENAI_MODEL, MCP_SERVERS, LANGFUSE_ENABLED, OPENAI_API_KEY
+from src.utils.mcp_response_filter import MCPResponseFilter
 from langchain_mcp_adapters.client import MultiServerMCPClient
 from langgraph.prebuilt import create_react_agent
+from langchain_openai import ChatOpenAI
 
 # Try to import Langfuse, but make it optional
 try:
@@ -41,6 +43,9 @@ class BaseAgent(ABC):
         # MCP client for tool access
         self.mcp_client = None
         self.agent = None
+        
+        # MCP response filter to reduce token usage (50K -> 2K tokens)
+        self.response_filter = MCPResponseFilter()
         
         # Initialize Langfuse callback handler
         self.langfuse_handler = None
@@ -77,10 +82,27 @@ class BaseAgent(ABC):
             if self.tools:
                 available_tools = [tool for tool in available_tools if tool.name in self.tools]
             
+            # Wrap tools with response filtering to reduce token usage
+            available_tools = self._wrap_tools_with_filtering(available_tools)
+            
             self.logger.info(f"Initialized {self.name} with {len(available_tools)} tools from {list(server_config.keys())}")
             
-            # No LangGraph agent - use direct MCP tool calls
-            self.agent = None
+            # Create LangGraph agent with MCP tools if we have tools
+            if available_tools and OPENAI_API_KEY:
+                try:
+                    llm = ChatOpenAI(model=OPENAI_MODEL, temperature=0)
+                    # create_react_agent doesn't take state_modifier - system message passed via messages instead
+                    self.agent = create_react_agent(llm, available_tools)
+                    self.logger.info(f"Created LangGraph agent for {self.name} with {len(available_tools)} tools")
+                except Exception as e:
+                    self.logger.warning(f"Failed to create LangGraph agent: {e}")
+                    self.agent = None
+            else:
+                self.agent = None
+                if not available_tools:
+                    self.logger.warning(f"No tools available for {self.name}")
+                if not OPENAI_API_KEY:
+                    self.logger.warning(f"No OpenAI API key configured")
             
         except Exception as e:
             self.logger.warning(f"Failed to initialize {self.name} with MCP tools: {e}")
@@ -107,6 +129,50 @@ class BaseAgent(ABC):
         
         # Default to no servers if no matching tools
         return {}
+    
+    def _wrap_tools_with_filtering(self, tools: List[Any]) -> List[Any]:
+        """Wrap MCP tools with response filtering to reduce token usage"""
+        from langchain_core.tools import StructuredTool
+        
+        wrapped_tools = []
+        for tool in tools:
+            # Create a wrapper function that filters the response
+            original_func = tool.func if hasattr(tool, 'func') else None
+            if not original_func:
+                wrapped_tools.append(tool)
+                continue
+            
+            # Create async wrapper with filtering
+            async def filtered_func(*args, _original=original_func, _tool_name=tool.name, **kwargs):
+                try:
+                    # Call original tool
+                    result = await _original(*args, **kwargs) if asyncio.iscoroutinefunction(_original) else _original(*args, **kwargs)
+                    
+                    # Filter response to reduce token usage
+                    filtered = self.response_filter.filter_response(result, _tool_name)
+                    
+                    # Log filtering stats
+                    original_tokens = self.response_filter.estimate_token_count(result)
+                    filtered_tokens = self.response_filter.estimate_token_count(filtered)
+                    if original_tokens > 1000:
+                        self.logger.info(f"Filtered {_tool_name}: {original_tokens}→{filtered_tokens} tokens")
+                    
+                    return filtered
+                except Exception as e:
+                    self.logger.error(f"Tool {_tool_name} failed: {e}")
+                    raise
+            
+            # Create new tool with same signature but filtered output
+            wrapped_tool = StructuredTool(
+                name=tool.name,
+                description=tool.description,
+                func=filtered_func,
+                coroutine=filtered_func,
+                args_schema=tool.args_schema if hasattr(tool, 'args_schema') else None
+            )
+            wrapped_tools.append(wrapped_tool)
+        
+        return wrapped_tools
     
     @abstractmethod
     async def process_query(self, query: str, context: Dict[str, Any] = None) -> Dict[str, Any]:
@@ -148,47 +214,61 @@ Always provide accurate, detailed responses and cite your sources when possible.
                     "timestamp": datetime.now().isoformat()
                 }
             
-            # Prepare the input for the agent with limited context
-            agent_input = {
-                "messages": [
-                    {"role": "system", "content": self.get_system_prompt()},
-                    {"role": "user", "content": query}
-                ]
-            }
+            # LangGraph ReAct agents expect messages in LangChain message format
+            from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
             
-            # Add limited context to avoid token overflow
-            if context:
-                # Only include recent conversation history (last 3 messages)
-                conversation_history = context.get("conversation_history", [])
-                if conversation_history:
-                    # Limit to last 3 messages to prevent context overflow
-                    recent_history = conversation_history[-3:] if len(conversation_history) > 3 else conversation_history
-                    agent_input["messages"].extend(recent_history)
+            messages = [
+                SystemMessage(content=self.get_system_prompt()),
+                HumanMessage(content=query)
+            ]
+            
+            # Add conversation history if available
+            if context and context.get("conversation_history"):
+                # Insert conversation history before the current query
+                history_messages = []
+                for msg in context["conversation_history"][-3:]:  # Last 3 messages for context
+                    if msg.get("role") == "user":
+                        history_messages.append(HumanMessage(content=msg["content"]))
+                    elif msg.get("role") == "assistant":
+                        history_messages.append(AIMessage(content=msg["content"]))
                 
-                # Add other context but exclude large data
-                limited_context = {
-                    "mode": context.get("mode"),
-                    "timestamp": context.get("timestamp")
-                }
-                agent_input["context"] = limited_context
+                # Insert history between system message and current query
+                messages = [messages[0]] + history_messages + [messages[1]]
             
-            # Prepare config with callbacks
-            config = {}
+            # Prepare config with Langfuse callbacks
+            config = {"configurable": {}}
             if self.langfuse_handler:
                 config["callbacks"] = [self.langfuse_handler]
+                config["run_name"] = f"{self.name}_query"
+                config["tags"] = [self.name, "langgraph", "mcp"]
+                
+                # Set session_id if available
+                if context and context.get("session_id"):
+                    self.langfuse_handler.session_id = context["session_id"]
             
-            # Run the agent
-            result = await self.agent.ainvoke(agent_input, config=config)
+            # Invoke LangGraph agent
+            result = await self.agent.ainvoke({"messages": messages}, config=config)
+            
+            # Extract final response from messages
+            final_messages = result.get("messages", [])
+            if final_messages:
+                last_message = final_messages[-1]
+                response_text = last_message.content if hasattr(last_message, 'content') else str(last_message)
+            else:
+                response_text = "No response generated"
             
             return {
                 "success": True,
-                "response": result.get("messages", []),
+                "response": response_text,
+                "messages": final_messages,
                 "agent": self.name,
                 "timestamp": datetime.now().isoformat()
             }
             
         except Exception as e:
             self.logger.error(f"Error in {self.name}: {e}")
+            import traceback
+            self.logger.debug(traceback.format_exc())
             return {
                 "success": False,
                 "error": str(e),

@@ -28,6 +28,10 @@ class RouterAgent:
         self.smart_router = SmartRouter(llm_client)
         self.name = "RouterAgent"
     
+    async def initialize_agents(self):
+        """Initialize all internal agents - delegates to SmartRouter"""
+        await self.smart_router.initialize_agents()
+    
     @observe()
     async def process_query(self, query: str, context: Dict[str, Any] = None) -> Dict[str, Any]:
         """

@@ -160,12 +160,18 @@ class ChatEndpoints:
         # Validate and normalize the mode
         validated_mode = self.mode_processor.validate_mode(mode)
         
+        # Generate or retrieve session_id for Langfuse session tracking
+        import uuid
+        session_id = str(uuid.uuid4())
+        
         # Prepare context
         context = {
             "mode": validated_mode.value,
             "conversation_history": conversation_history or [],
             "timestamp": datetime.now().isoformat(),
-            "pdf_context": pdf_context
+            "pdf_context": pdf_context,
+            "session_id": session_id,  # Add session_id for Langfuse correlation
+            "user_id": "anonymous"  # Can be customized for user tracking
         }
         
         # Add Langfuse trace metadata if available
@@ -173,10 +179,13 @@ class ChatEndpoints:
             try:
                 langfuse = get_client()
                 langfuse.update_current_trace(
-                    tags=[validated_mode.value, "chat"],
+                    session_id=context.get("session_id"),
+                    user_id=context.get("user_id", "anonymous"),
+                    tags=[validated_mode.value, "chat", "langgraph"],
                     metadata={
                         "mode": validated_mode.value,
                         "pdf_attached": bool(pdf_context),
+                        "has_mcp_tools": True,
                         "message_length": len(message)
                     }
                 )

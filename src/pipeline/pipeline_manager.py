@@ -48,14 +48,18 @@ class PipelineManager:
         self._initialized = False
     
     async def initialize(self):
-        """Initialize all agents"""
+        """Initialize all agents at startup - eliminates per-query initialization latency"""
         if self._initialized:
             return
         
         try:
             self.logger.info("Initializing Catalyze pipeline...")
             
-            # Initialize all agents
+            # Initialize router agent's internal agents (SmartRouter pattern)
+            if hasattr(self.router_agent, 'initialize_agents'):
+                await self.router_agent.initialize_agents()
+            
+            # Initialize standalone agents in parallel
             await asyncio.gather(
                 self.research_agent.initialize(),
                 self.protocol_agent.initialize(),

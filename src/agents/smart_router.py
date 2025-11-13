@@ -38,12 +38,14 @@ class SmartRouter:
         
         # Initialize components
         self.intent_classifier = IntentClassifier(llm_client)
+        # Create agent instances once - they'll be initialized on first use or at startup
         self.specialized_agents = {
             IntentType.RESEARCH: ResearchAgent(),
             IntentType.PROTOCOL: ProtocolAgent(),
             IntentType.AUTOMATE: AutomateAgent(),
             IntentType.SAFETY: SafetyAgent()
         }
+        self._agents_initialized = False
     
     async def process_query(self, query: str, context: Dict[str, Any] = None) -> Dict[str, Any]:
         """
@@ -108,8 +110,24 @@ class SmartRouter:
                 "metadata": {"error_time": datetime.now().isoformat()}
             }
     
+    async def initialize_agents(self):
+        """Initialize all agents once at startup - reduces per-query latency"""
+        if self._agents_initialized:
+            return
+        
+        self.logger.info("Pre-initializing all specialized agents...")
+        for intent, agent in self.specialized_agents.items():
+            try:
+                await agent.initialize()
+                self.logger.info(f"✓ {intent.value} agent ready")
+            except Exception as e:
+                self.logger.error(f"Failed to initialize {intent.value} agent: {e}")
+        
+        self._agents_initialized = True
+        self.logger.info("All agents pre-initialized and ready")
+    
     async def _execute_agent(self, intent: IntentType, query: str, context: Dict[str, Any]) -> Dict[str, Any]:
-        """Execute the appropriate specialized agent"""
+        """Execute the appropriate specialized agent (agents are pre-initialized)"""
         try:
             agent = self.specialized_agents.get(intent)
             if not agent:
@@ -118,12 +136,8 @@ class SmartRouter:
                     "error": f"No agent available for intent: {intent.value}"
                 }
             
-            # Initialize agent if needed
-            if not hasattr(agent, '_initialized') or not agent._initialized:
-                await agent.initialize()
-                agent._initialized = True
-            
-            # Process the query
+            # Agents should already be initialized at startup
+            # Process the query directly (no initialization overhead per query)
             response = await agent.process_query(query, context)
             return response
             
