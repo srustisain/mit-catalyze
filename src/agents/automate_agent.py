@@ -9,6 +9,16 @@ from typing import Dict, Any, List
 from .base_agent import BaseAgent
 from src.clients.opentrons_validator import OpentronsCodeGenerator, OpentronsValidator
 
+# Try to import Langfuse decorator
+try:
+    from langfuse.decorators import observe
+except ImportError:
+    # Create a no-op decorator if Langfuse is not available
+    def observe(*args, **kwargs):
+        def decorator(func):
+            return func
+        return decorator if not args else decorator(args[0])
+
 
 class AutomateAgent(BaseAgent):
     """Creates automation scripts for lab equipment"""
@@ -43,6 +53,7 @@ class AutomateAgent(BaseAgent):
                     mcp_client=None
                 )
     
+    @observe()
     async def process_query(self, query: str, context: Dict[str, Any] = None) -> Dict[str, Any]:
         """Generate automation scripts for lab equipment with Opentrons validation"""
         

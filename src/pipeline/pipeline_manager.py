@@ -12,6 +12,16 @@ from datetime import datetime
 
 from src.agents import RouterAgent, ResearchAgent, ProtocolAgent, AutomateAgent, SafetyAgent
 
+# Try to import Langfuse decorator
+try:
+    from langfuse.decorators import observe
+except ImportError:
+    # Create a no-op decorator if Langfuse is not available
+    def observe(*args, **kwargs):
+        def decorator(func):
+            return func
+        return decorator if not args else decorator(args[0])
+
 
 class PipelineManager:
     """Main pipeline orchestrator for the Catalyze system"""
@@ -60,6 +70,7 @@ class PipelineManager:
             self.logger.error(f"Pipeline initialization failed: {e}")
             raise
     
+    @observe()
     async def process_query(self, query: str, mode: str = "research", context: Dict[str, Any] = None) -> Dict[str, Any]:
         """
         Process a query through the appropriate agent pipeline

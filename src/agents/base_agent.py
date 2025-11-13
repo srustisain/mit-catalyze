@@ -14,9 +14,18 @@ from typing import Any, Dict, List, Optional
 from datetime import datetime
 
 from src.clients.llm_client import LLMClient
-from src.config.config import OPENAI_MODEL, MCP_SERVERS
+from src.config.config import OPENAI_MODEL, MCP_SERVERS, LANGFUSE_ENABLED
 from langchain_mcp_adapters.client import MultiServerMCPClient
 from langgraph.prebuilt import create_react_agent
+
+# Try to import Langfuse, but make it optional
+try:
+    from langfuse.langchain import CallbackHandler as LangfuseCallbackHandler
+    LANGFUSE_AVAILABLE = True
+except ImportError:
+    logging.warning("langfuse not available. Tracing will be disabled.")
+    LangfuseCallbackHandler = None
+    LANGFUSE_AVAILABLE = False
 
 
 class BaseAgent(ABC):
@@ -32,6 +41,16 @@ class BaseAgent(ABC):
         # MCP client for tool access
         self.mcp_client = None
         self.agent = None
+        
+        # Initialize Langfuse callback handler
+        self.langfuse_handler = None
+        if LANGFUSE_AVAILABLE and LANGFUSE_ENABLED:
+            try:
+                self.langfuse_handler = LangfuseCallbackHandler()
+                self.logger.info(f"Langfuse tracing enabled for {self.name}")
+            except Exception as e:
+                self.logger.warning(f"Failed to initialize Langfuse for {self.name}: {e}")
+                self.langfuse_handler = None
         
     async def initialize(self):
         """Initialize the agent with MCP tools"""
@@ -153,8 +172,13 @@ Always provide accurate, detailed responses and cite your sources when possible.
                 }
                 agent_input["context"] = limited_context
             
+            # Prepare config with callbacks
+            config = {}
+            if self.langfuse_handler:
+                config["callbacks"] = [self.langfuse_handler]
+            
             # Run the agent
-            result = await self.agent.ainvoke(agent_input)
+            result = await self.agent.ainvoke(agent_input, config=config)
             
             return {
                 "success": True,

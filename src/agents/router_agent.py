@@ -9,6 +9,16 @@ from typing import Dict, Any
 from .smart_router import SmartRouter
 from src.clients.llm_client import LLMClient
 
+# Try to import Langfuse decorator
+try:
+    from langfuse.decorators import observe
+except ImportError:
+    # Create a no-op decorator if Langfuse is not available
+    def observe(*args, **kwargs):
+        def decorator(func):
+            return func
+        return decorator if not args else decorator(args[0])
+
 
 class RouterAgent:
     """Intelligent router agent for query classification and delegation"""
@@ -18,6 +28,7 @@ class RouterAgent:
         self.smart_router = SmartRouter(llm_client)
         self.name = "RouterAgent"
     
+    @observe()
     async def process_query(self, query: str, context: Dict[str, Any] = None) -> Dict[str, Any]:
         """
         Process a user query through the intelligent router system

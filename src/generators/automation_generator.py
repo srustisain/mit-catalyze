@@ -1,6 +1,16 @@
 from typing import Dict, List, Optional, Any
 import re
 
+# Try to import Langfuse decorator
+try:
+    from langfuse.decorators import observe
+except ImportError:
+    # Create a no-op decorator if Langfuse is not available
+    def observe(*args, **kwargs):
+        def decorator(func):
+            return func
+        return decorator if not args else decorator(args[0])
+
 class AutomationGenerator:
     """Generates Opentrons automation scripts from protocols"""
     
@@ -9,6 +19,7 @@ class AutomationGenerator:
         self.plates = ['corning_96_wellplate_360ul_flat', 'corning_384_wellplate_112ul_flat']
         self.pipettes = ['p300_single', 'p1000_single']
     
+    @observe()
     def generate_script(self, protocol: Dict[str, Any], chemical_data: Dict[str, Any]) -> str:
         """Generate Opentrons script from protocol"""
         

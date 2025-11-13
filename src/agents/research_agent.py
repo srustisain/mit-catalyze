@@ -8,6 +8,16 @@ Uses ChEMBL MCP tools and PubChem for comprehensive chemical information.
 from typing import Dict, Any, List
 from .base_agent import BaseAgent
 
+# Try to import Langfuse decorator
+try:
+    from langfuse.decorators import observe
+except ImportError:
+    # Create a no-op decorator if Langfuse is not available
+    def observe(*args, **kwargs):
+        def decorator(func):
+            return func
+        return decorator if not args else decorator(args[0])
+
 
 class ResearchAgent(BaseAgent):
     """Handles chemistry research questions and explanations"""
@@ -25,6 +35,7 @@ class ResearchAgent(BaseAgent):
             ]
         )
     
+    @observe()
     async def process_query(self, query: str, context: Dict[str, Any] = None) -> Dict[str, Any]:
         """Process chemistry research questions"""
         

@@ -8,6 +8,16 @@ Focuses on creating detailed, safe, and reproducible laboratory procedures.
 from typing import Dict, Any, List
 from .base_agent import BaseAgent
 
+# Try to import Langfuse decorator
+try:
+    from langfuse.decorators import observe
+except ImportError:
+    # Create a no-op decorator if Langfuse is not available
+    def observe(*args, **kwargs):
+        def decorator(func):
+            return func
+        return decorator if not args else decorator(args[0])
+
 
 class ProtocolAgent(BaseAgent):
     """Generates lab protocols and experimental procedures"""
@@ -25,6 +35,7 @@ class ProtocolAgent(BaseAgent):
             ]
         )
     
+    @observe()
     async def process_query(self, query: str, context: Dict[str, Any] = None) -> Dict[str, Any]:
         """Generate lab protocols and procedures"""
         
