@@ -17,6 +17,7 @@ import re
 import json
 
 from src.clients.llm_client import LLMClient
+from src.config.logging_config import get_logger
 
 
 class IntentType(Enum):
@@ -42,7 +43,7 @@ class IntentClassifier:
     
     def __init__(self, llm_client: LLMClient = None):
         self.llm_client = llm_client or LLMClient()
-        self.logger = logging.getLogger("catalyze.intent_classifier")
+        self.logger = get_logger("catalyze.intent_classifier")
         
         # Define keywords and patterns for each intent
         self.intent_patterns = {
@@ -78,17 +79,29 @@ class IntentClassifier:
             },
             IntentType.AUTOMATE: {
                 "keywords": [
-                    "opentrons", "ot-2", "ot2", "flex", "protocol", "pipette",
+                    "opentrons", "ot-2", "ot2", "flex", "pipette",
                     "liquid handling", "automation", "robot", "robotic",
                     "automate", "script", "code", "program", "pyhamilton",
-                    "96-well", "plate", "transfer", "dispense", "aspirate"
+                    "96-well", "plate", "transfer", "dispense", "aspirate",
+                    "api v2", "api v1", "python code", "write code",
+                    "generate code", "create code", "write script", "make script",
+                    "generate script", "create script", "automation code"
                 ],
                 "patterns": [
+                    r"write opentrons.*code",
+                    r"opentrons.*api.*code",
+                    r"generate.*opentrons.*code",
+                    r"create.*opentrons.*script",
                     r"opentrons (protocol|script|code)",
                     r"generate (opentrons|ot-2|flex) (protocol|script)",
                     r"automate (.*) (process|procedure)",
                     r"create (.*) (script|code|program)",
-                    r"liquid handling (protocol|script)"
+                    r"liquid handling (protocol|script)",
+                    r"generate (code|script)",
+                    r"create (code|script)",
+                    r"write (code|script)",
+                    r"make (code|script)",
+                    r"(code|script) for"
                 ]
             },
             IntentType.SAFETY: {
@@ -159,15 +172,27 @@ class IntentClassifier:
         for intent_type, patterns in self.intent_patterns.items():
             score = 0.0
             
-            # Check keywords
-            for keyword in patterns["keywords"]:
-                if keyword in query_lower:
-                    score += 1.0
-            
-            # Check regex patterns
+            # Check regex patterns first (highest priority)
             for pattern in patterns["patterns"]:
                 if re.search(pattern, query_lower):
-                    score += 2.0  # Patterns are more specific than keywords
+                    score += 5.0  # Patterns are most specific
+            
+            # Check high-priority keywords for automation
+            if intent_type == IntentType.AUTOMATE:
+                high_priority_keywords = ["write code", "generate code", "create code", "api v2", "api v1", "python code", "opentrons", "ot-2", "ot2", "automation code"]
+                for keyword in high_priority_keywords:
+                    if keyword in query_lower:
+                        score += 3.0
+                
+                # Check other keywords
+                for keyword in patterns["keywords"]:
+                    if keyword not in high_priority_keywords and keyword in query_lower:
+                        score += 1.0
+            else:
+                # Check keywords for other intents
+                for keyword in patterns["keywords"]:
+                    if keyword in query_lower:
+                        score += 1.0
             
             intent_scores[intent_type] = score
         
@@ -390,7 +415,9 @@ Respond with JSON:
             "pressure", "enzyme", "protein", "dna", "rna", "pcr", "polymerase",
             "safety", "hazard", "toxic", "flammable", "corrosive", "ppe",
             "what is", "how to", "explain", "tell me", "create", "generate",
-            "make", "prepare", "analyze", "test", "measure", "calculate"
+            "make", "prepare", "analyze", "test", "measure", "calculate",
+            "code", "script", "program", "automate", "robot", "robotic", "ot-2", "ot2", "flex",
+            "96-well", "plate", "transfer", "dispense", "aspirate", "well", "wells"
         ]
         
         # Check for chemical formulas (capital letter + lowercase + numbers)
@@ -430,14 +457,15 @@ async def test_intent_classifier():
         "What PPE should I wear for this experiment?"
     ]
     
-    print("🧪 Testing Intent Classifier...")
+    logger = get_logger("catalyze.test.intent_classifier")
+    logger.info("🧪 Testing Intent Classifier...")
     for query in test_queries:
         result = await classifier.classify(query)
-        print(f"Query: {query}")
-        print(f"Intent: {result.intent.value} (confidence: {result.confidence:.2f})")
-        print(f"Entities: {result.entities}")
-        print(f"Reasoning: {result.reasoning}")
-        print("-" * 50)
+        logger.info(f"Query: {query}")
+        logger.info(f"Intent: {result.intent.value} (confidence: {result.confidence:.2f})")
+        logger.info(f"Entities: {result.entities}")
+        logger.info(f"Reasoning: {result.reasoning}")
+        logger.info("-" * 50)
 
 
 if __name__ == "__main__":

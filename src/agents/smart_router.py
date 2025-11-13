@@ -16,6 +16,7 @@ from .protocol_agent import ProtocolAgent
 from .automate_agent import AutomateAgent
 from .safety_agent import SafetyAgent
 from src.clients.llm_client import LLMClient
+from src.config.logging_config import get_logger
 
 
 class RouterState(TypedDict):
@@ -34,7 +35,7 @@ class SmartRouter:
     
     def __init__(self, llm_client: LLMClient = None):
         self.llm_client = llm_client or LLMClient()
-        self.logger = logging.getLogger("catalyze.smart_router")
+        self.logger = get_logger("catalyze.smart_router")
         
         # Initialize components
         self.intent_classifier = IntentClassifier(llm_client)
@@ -84,6 +85,19 @@ class SmartRouter:
                 }
             
             # Step 3: Execute the appropriate agent
+            if classification.intent == IntentType.UNKNOWN:
+                # Handle unknown intents with a helpful default response
+                return {
+                    "success": True,
+                    "response": "Sorry, I can help you with chemistry and lab-related questions! I can assist with:\n\n• **Research questions** - Chemical compounds, reactions, properties\n• **Protocol generation** - Lab procedures and experimental methods\n• **Lab automation** - Opentrons protocols and automation scripts\n• **Safety analysis** - Chemical hazards and safety procedures\n\nPlease ask me something related to chemistry or laboratory work!",
+                    "classification": classification,
+                    "metadata": {
+                        "processed_at": datetime.now().isoformat(),
+                        "intent": "unknown",
+                        "confidence": classification.confidence
+                    }
+                }
+            
             agent_response = await self._execute_agent(classification.intent, query, context)
             
             # Step 4: Format the response
@@ -205,15 +219,16 @@ async def test_smart_router():
         "Create a protein extraction protocol"
     ]
     
-    print("🧪 Testing Smart Router...")
+    logger = get_logger("catalyze.test.smart_router")
+    logger.info("🧪 Testing Smart Router...")
     for query in test_queries:
-        print(f"\nQuery: {query}")
+        logger.info(f"\nQuery: {query}")
         result = await router.process_query(query)
-        print(f"Success: {result['success']}")
-        print(f"Response: {result['response'][:200]}...")
+        logger.info(f"Success: {result['success']}")
+        logger.info(f"Response: {result['response'][:200]}...")
         if result.get('classification'):
-            print(f"Classified as: {result['classification'].intent.value}")
-        print("-" * 50)
+            logger.info(f"Classified as: {result['classification'].intent.value}")
+        logger.info("-" * 50)
 
 
 if __name__ == "__main__":

@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 import asyncio
+import sys
+import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from langchain_mcp_adapters.client import MultiServerMCPClient
 from src.config.config import MCP_SERVERS
 
@@ -14,4 +17,3 @@ async def test():
 
 if __name__ == "__main__":
     asyncio.run(test())
-ve 

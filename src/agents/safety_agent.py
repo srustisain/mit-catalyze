@@ -107,8 +107,6 @@ Prioritize safety and provide clear, actionable safety guidance.
                 "timestamp": self._get_timestamp()
             }
     
-    def get_system_prompt(self) -> str:
-        return """You are a chemical safety specialist. Analyze hazards, provide safety precautions, PPE recommendations, and safe handling procedures. Prioritize human safety and environmental protection. Reference safety data and provide clear, actionable recommendations."""
     
     def _get_timestamp(self):
         """Get current timestamp"""

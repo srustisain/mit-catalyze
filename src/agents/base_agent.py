@@ -16,7 +16,6 @@ from datetime import datetime
 from src.clients.llm_client import LLMClient
 from src.config.config import OPENAI_MODEL, MCP_SERVERS, LANGFUSE_ENABLED, OPENAI_API_KEY
 from src.utils.mcp_response_filter import MCPResponseFilter
-from langchain_mcp_adapters.client import MultiServerMCPClient
 from langgraph.prebuilt import create_react_agent
 from langchain_openai import ChatOpenAI
 
@@ -28,6 +27,17 @@ except ImportError:
     logging.warning("langfuse not available. Tracing will be disabled.")
     LangfuseCallbackHandler = None
     LANGFUSE_AVAILABLE = False
+from src.prompts import load_prompt
+from src.config.logging_config import get_logger
+
+# Try to import MCP client, but make it optional
+try:
+    from langchain_mcp_adapters.client import MultiServerMCPClient
+    MCP_AVAILABLE = True
+except ImportError:
+    print("Warning: langchain_mcp_adapters not available. MCP functionality will be disabled.")
+    MultiServerMCPClient = None
+    MCP_AVAILABLE = False
 
 
 class BaseAgent(ABC):
@@ -38,7 +48,7 @@ class BaseAgent(ABC):
         self.description = description
         self.tools = tools or []
         self.llm_client = LLMClient(provider="openai")
-        self.logger = logging.getLogger(f"catalyze.{name.lower()}")
+        self.logger = get_logger(f"catalyze.{name.lower()}")
         
         # MCP client for tool access
         self.mcp_client = None
@@ -60,6 +70,12 @@ class BaseAgent(ABC):
     async def initialize(self):
         """Initialize the agent with MCP tools"""
         try:
+            if not MCP_AVAILABLE:
+                self.logger.warning(f"MCP not available, initializing {self.name} without tools")
+                self.mcp_client = None
+                self.agent = None
+                return
+                
             if not MCP_SERVERS:
                 self.logger.warning(f"No MCP servers configured, initializing {self.name} without tools")
                 self.mcp_client = None
@@ -78,9 +94,14 @@ class BaseAgent(ABC):
             self.mcp_client = MultiServerMCPClient(server_config)
             available_tools = await self.mcp_client.get_tools()
             
+            self.logger.info(f"🔧 {self.name} - MCP client loaded {len(available_tools)} total tools from {list(server_config.keys())}")
+            self.logger.info(f"🔧 {self.name} - Available tool names: {[tool.name for tool in available_tools]}")
+            
             # Filter tools based on agent specialization
             if self.tools:
                 available_tools = [tool for tool in available_tools if tool.name in self.tools]
+                self.logger.info(f"🔧 {self.name} - Filtered to {len(available_tools)} tools matching {self.tools}")
+                self.logger.info(f"🔧 {self.name} - Filtered tool names: {[tool.name for tool in available_tools]}")
             
             # Wrap tools with response filtering to reduce token usage
             available_tools = self._wrap_tools_with_filtering(available_tools)
@@ -190,12 +211,22 @@ class BaseAgent(ABC):
     
     def get_system_prompt(self) -> str:
         """Get the system prompt for this agent"""
-        return f"""You are {self.name}, a specialized AI agent for chemistry tasks.
+        try:
+            # Try to load from prompt file first
+            # Convert class name to file name (e.g., ResearchAgent -> research_agent)
+            class_name = self.__class__.__name__
+            file_name = class_name.lower().replace('agent', '_agent')
+            prompt_template = load_prompt(file_name)
+            return prompt_template
+        except FileNotFoundError:
+            # Fallback to default prompt if file not found
+            return f"""You are {self.name}, a specialized AI agent for chemistry tasks.
 
 {self.description}
 
 You have access to specialized tools and databases to help with your tasks.
 Always provide accurate, detailed responses and cite your sources when possible.
+Please format your responses in well-structured markdown for better readability.
 """
     
     async def _run_agent_safely(self, query: str, context: Dict[str, Any] = None) -> Dict[str, Any]:
@@ -257,11 +288,34 @@ Always provide accurate, detailed responses and cite your sources when possible.
             else:
                 response_text = "No response generated"
             
+            # Log the result
+            messages = result.get("messages", [])
+            self.logger.info(f"🔧 {self.name} - Agent completed with {len(messages)} response messages")
+            
+            # Log any tool calls made
+            tool_calls_made = []
+            for message in messages:
+                if hasattr(message, 'tool_calls') and message.tool_calls:
+                    for tool_call in message.tool_calls:
+                        tool_calls_made.append({
+                            'tool_name': tool_call.get('name', 'unknown'),
+                            'args': tool_call.get('args', {}),
+                            'id': tool_call.get('id', 'unknown')
+                        })
+            
+            if tool_calls_made:
+                self.logger.info(f"🔧 {self.name} - Made {len(tool_calls_made)} tool calls:")
+                for i, tool_call in enumerate(tool_calls_made, 1):
+                    self.logger.info(f"  {i}. {tool_call['tool_name']} with args: {tool_call['args']}")
+            else:
+                self.logger.info(f"🔧 {self.name} - No tool calls made")
+            
             return {
                 "success": True,
                 "response": response_text,
                 "messages": final_messages,
                 "agent": self.name,
+                "tool_calls": tool_calls_made,
                 "timestamp": datetime.now().isoformat()
             }
             
