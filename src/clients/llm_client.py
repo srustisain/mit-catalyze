@@ -3,6 +3,19 @@ from typing import Dict, List, Optional, Any
 import json
 import re
 import requests
+from src.config.config import OPENAI_API_KEY, CEREBRAS_API_KEY, HUGGINGFACE_API_KEY, LLM_PROVIDER, OPENAI_MODEL, CEREBRAS_MODEL, HUGGINGFACE_MODEL, LANGFUSE_ENABLED
+
+# Try to import Langfuse decorator
+try:
+    from langfuse.decorators import observe
+    LANGFUSE_AVAILABLE = True
+except ImportError:
+    # Create a no-op decorator if Langfuse is not available
+    def observe(*args, **kwargs):
+        def decorator(func):
+            return func
+        return decorator if not args else decorator(args[0])
+    LANGFUSE_AVAILABLE = False
 from src.config.config import OPENAI_API_KEY, CEREBRAS_API_KEY, HUGGINGFACE_API_KEY, LLM_PROVIDER, OPENAI_MODEL, CEREBRAS_MODEL, HUGGINGFACE_MODEL
 from src.config.logging_config import get_logger
 
@@ -22,9 +35,13 @@ class LLMClient:
         self.logger = get_logger("catalyze.llm_client")
         self.huggingface_key = HUGGINGFACE_API_KEY
         
-        # Initialize OpenAI client if key is available
+        # Initialize OpenAI client with proper retry and timeout settings
         if self.openai_key:
-            self.openai_client = OpenAI(api_key=self.openai_key)
+            self.openai_client = OpenAI(
+                api_key=self.openai_key,
+                max_retries=3,  # Retry up to 3 times on transient errors
+                timeout=30.0    # 30 second timeout per request
+            )
         else:
             self.openai_client = None
     
@@ -32,6 +49,7 @@ class LLMClient:
         """Set the LLM provider to use"""
         self.provider = provider
     
+    @observe(as_type="generation")
     def generate_protocol(self, query: str, chemical_data: Dict[str, Any], explain_mode: bool = False) -> Dict[str, Any]:
         """Generate a chemical protocol from a query"""
         
@@ -301,6 +319,7 @@ Format your response as JSON with the following structure:
             "safety_notes": "Handle all chemicals with appropriate PPE and in a well-ventilated area."
         }
     
+    @observe(as_type="generation")
     def explain_reaction(self, reaction: str) -> str:
         """Explain a chemical reaction in simple terms"""
         try:
@@ -334,6 +353,7 @@ Format your response as JSON with the following structure:
             self.logger.error(f"Error explaining reaction with {self.provider}: {e}")
             return "This is a chemical reaction. The reactants combine to form products under specific conditions."
     
+    @observe(as_type="generation")
     def validate_protocol(self, protocol: str) -> Dict[str, Any]:
         """Validate a protocol for completeness and safety"""
         try:
@@ -388,6 +408,7 @@ Format your response as JSON with the following structure:
                 "suggestions": ["Review protocol manually"]
             }
     
+    @observe(as_type="generation")
     def generate_chat_response(self, message: str, conversation_history: List[Dict[str, str]] = None) -> str:
         """Generate a conversational response from the LLM"""
         try:
@@ -445,6 +466,7 @@ Format your response as JSON with the following structure:
             self.logger.error(f"Error generating chat response with {self.provider}: {e}")
             return "I apologize, but I encountered an error while processing your message. Please try again."
 
+    @observe(as_type="generation")
     def generate_response(self, prompt: str, system_message: str = "You are a helpful chemistry assistant.") -> str:
         """Generate a response from the LLM - used by ProtocolGenerator"""
         try:

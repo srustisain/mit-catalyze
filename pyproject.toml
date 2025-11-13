@@ -11,6 +11,7 @@ dependencies = [
     "langchain-mcp-adapters>=0.1.9",
     "langchain-openai>=0.2.0",
     "langgraph>=0.6.7",
+    "langfuse>=3.9.0",
     "openai>=1.107.1",
     "pandas>=2.3.2",
     "python-dotenv>=1.1.1",

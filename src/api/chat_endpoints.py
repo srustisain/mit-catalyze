@@ -14,6 +14,20 @@ from openai import OpenAI
 
 from src.pipeline import PipelineManager, ModeProcessor
 
+# Try to import Langfuse decorator and client
+try:
+    from langfuse.decorators import observe
+    from langfuse import get_client
+    LANGFUSE_AVAILABLE = True
+except ImportError:
+    # Create a no-op decorator if Langfuse is not available
+    def observe(*args, **kwargs):
+        def decorator(func):
+            return func
+        return decorator if not args else decorator(args[0])
+    get_client = None
+    LANGFUSE_AVAILABLE = False
+
 
 class ChatEndpoints:
     """Handles chat API endpoints with agent-based processing"""
@@ -124,6 +138,7 @@ class ChatEndpoints:
             self._initialized = True
             self.logger.info("Chat endpoints initialized")
     
+    @observe()
     async def process_chat_message(self, message: str, mode: str = "research", 
                                  conversation_history: Optional[list] = None,
                                  pdf_context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
@@ -146,13 +161,37 @@ class ChatEndpoints:
         # Validate and normalize the mode
         validated_mode = self.mode_processor.validate_mode(mode)
         
+        # Generate or retrieve session_id for Langfuse session tracking
+        import uuid
+        session_id = str(uuid.uuid4())
+        
         # Prepare context
         context = {
             "mode": validated_mode.value,
             "conversation_history": conversation_history or [],
             "timestamp": datetime.now().isoformat(),
-            "pdf_context": pdf_context
+            "pdf_context": pdf_context,
+            "session_id": session_id,  # Add session_id for Langfuse correlation
+            "user_id": "anonymous"  # Can be customized for user tracking
         }
+        
+        # Add Langfuse trace metadata if available
+        if LANGFUSE_AVAILABLE and get_client:
+            try:
+                langfuse = get_client()
+                langfuse.update_current_trace(
+                    session_id=context.get("session_id"),
+                    user_id=context.get("user_id", "anonymous"),
+                    tags=[validated_mode.value, "chat", "langgraph"],
+                    metadata={
+                        "mode": validated_mode.value,
+                        "pdf_attached": bool(pdf_context),
+                        "has_mcp_tools": True,
+                        "message_length": len(message)
+                    }
+                )
+            except Exception as e:
+                self.logger.debug(f"Failed to update Langfuse trace: {e}")
         
         self.logger.info(f"Processing chat message in {validated_mode.value} mode")
         
@@ -400,6 +439,7 @@ class ChatEndpoints:
             self.logger.error(f"Basic reading failed: {e}")
             raise ValueError("No PDF text extraction libraries available. Please install PyMuPDF or PyPDF2.")
     
+    @observe(as_type="span")
     async def process_pdf(self, pdf_path: str, filename: str) -> Dict[str, Any]:
         """
         Process PDF file with OpenAI and extract text content

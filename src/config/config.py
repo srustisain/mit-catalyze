@@ -1,4 +1,5 @@
 import os
+import pathlib
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -15,6 +16,12 @@ LLM_PROVIDER = os.getenv("LLM_PROVIDER", "openai")  # Default to openai
 OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-3.5-turbo")
 CEREBRAS_MODEL = os.getenv("CEREBRAS_MODEL", "llama3.1-70b")
 HUGGINGFACE_MODEL = os.getenv("HUGGINGFACE_MODEL", "mistralai/Mistral-7B-Instruct-v0.2")
+
+# Langfuse Configuration
+LANGFUSE_PUBLIC_KEY = os.getenv("LANGFUSE_PUBLIC_KEY")
+LANGFUSE_SECRET_KEY = os.getenv("LANGFUSE_SECRET_KEY")
+LANGFUSE_HOST = os.getenv("LANGFUSE_HOST", "https://cloud.langfuse.com")
+LANGFUSE_ENABLED = os.getenv("LANGFUSE_ENABLED", "true").lower() == "true"
 
 # PubChem API settings
 PUBCHEM_BASE_URL = "https://pubchem.ncbi.nlm.nih.gov/rest/pug"
@@ -35,18 +42,23 @@ APP_DESCRIPTION = "Transform research questions into lab protocols and automatio
 # For HTTP servers:
 #   {"transport": "streamable_http", "url": "http://localhost:8000"}
 #
+
+# Get absolute paths for MCP servers
+_PROJECT_ROOT = pathlib.Path(__file__).parent.parent.parent
+_CHEMBL_SERVER_PATH = str(_PROJECT_ROOT / "mcp_servers" / "chembl-mcp-server" / "build" / "index.js")
+_OPENTRONS_SERVER_PATH = str(_PROJECT_ROOT / "mcp_servers" / "opentrons-mcp-server" / "dist" / "index.js")
+
 MCP_SERVERS = {
-    # Temporarily disabled MCP servers due to initialization issues
     "chembl": {
         "transport": "stdio",
         "command": "node",
-        "args": ["mcp_servers/chembl-mcp-server/build/index.js"]
+        "args": [_CHEMBL_SERVER_PATH]
     },
     
     "opentrons": {
         "transport": "stdio",
         "command": "node",
-        "args": ["mcp_servers/opentrons-mcp-server/dist/index.js"]
+        "args": [_OPENTRONS_SERVER_PATH]
     }
     
     # Example HTTP-based MCP servers (commented out for now)

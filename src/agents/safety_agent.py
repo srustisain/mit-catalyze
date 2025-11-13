@@ -8,6 +8,16 @@ Focuses on chemical safety, hazard identification, and safety protocol recommend
 from typing import Dict, Any, List
 from .base_agent import BaseAgent
 
+# Try to import Langfuse decorator
+try:
+    from langfuse.decorators import observe
+except ImportError:
+    # Create a no-op decorator if Langfuse is not available
+    def observe(*args, **kwargs):
+        def decorator(func):
+            return func
+        return decorator if not args else decorator(args[0])
+
 
 class SafetyAgent(BaseAgent):
     """Analyzes safety hazards and provides safety information"""
@@ -25,6 +35,7 @@ class SafetyAgent(BaseAgent):
             ]
         )
     
+    @observe()
     async def process_query(self, query: str, context: Dict[str, Any] = None) -> Dict[str, Any]:
         """Analyze safety hazards and provide safety information"""
         
@@ -51,17 +62,12 @@ Prioritize safety and provide clear, actionable safety guidance.
                 agent_result = await self._run_agent_safely(safety_prompt, context)
                 
                 if agent_result.get("success"):
-                    # Extract the response content
-                    messages = agent_result.get("response", [])
-                    response_content = ""
-                    
-                    for message in messages:
-                        if hasattr(message, 'content') and message.content:
-                            response_content += message.content + "\n"
+                    # Response is already extracted as string from _run_agent_safely
+                    response_content = agent_result.get("response", "")
                     
                     return {
                         "success": True,
-                        "response": response_content.strip(),
+                        "response": response_content,
                         "agent": self.name,
                         "used_mcp": True,
                         "timestamp": self._get_timestamp()

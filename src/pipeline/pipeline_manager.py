@@ -12,6 +12,16 @@ from datetime import datetime
 
 from src.agents import RouterAgent, ResearchAgent, ProtocolAgent, AutomateAgent, SafetyAgent
 
+# Try to import Langfuse decorator
+try:
+    from langfuse.decorators import observe
+except ImportError:
+    # Create a no-op decorator if Langfuse is not available
+    def observe(*args, **kwargs):
+        def decorator(func):
+            return func
+        return decorator if not args else decorator(args[0])
+
 
 class PipelineManager:
     """Main pipeline orchestrator for the Catalyze system"""
@@ -38,14 +48,18 @@ class PipelineManager:
         self._initialized = False
     
     async def initialize(self):
-        """Initialize all agents"""
+        """Initialize all agents at startup - eliminates per-query initialization latency"""
         if self._initialized:
             return
         
         try:
             self.logger.info("Initializing Catalyze pipeline...")
             
-            # Initialize all agents
+            # Initialize router agent's internal agents (SmartRouter pattern)
+            if hasattr(self.router_agent, 'initialize_agents'):
+                await self.router_agent.initialize_agents()
+            
+            # Initialize standalone agents in parallel
             await asyncio.gather(
                 self.research_agent.initialize(),
                 self.protocol_agent.initialize(),
@@ -60,6 +74,7 @@ class PipelineManager:
             self.logger.error(f"Pipeline initialization failed: {e}")
             raise
     
+    @observe()
     async def process_query(self, query: str, mode: str = "research", context: Dict[str, Any] = None) -> Dict[str, Any]:
         """
         Process a query through the appropriate agent pipeline

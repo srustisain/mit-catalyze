@@ -2,12 +2,23 @@ from typing import Dict, List, Optional, Any
 import re
 from src.clients.llm_client import LLMClient
 
+# Try to import Langfuse decorator
+try:
+    from langfuse.decorators import observe
+except ImportError:
+    # Create a no-op decorator if Langfuse is not available
+    def observe(*args, **kwargs):
+        def decorator(func):
+            return func
+        return decorator if not args else decorator(args[0])
+
 class ProtocolGenerator:
     """Generates and manages chemical protocols"""
     
     def __init__(self):
         self.llm_client = LLMClient()
     
+    @observe()
     def generate_protocol(self, query: str, chemical_data: Dict[str, Any], explain_mode: bool = False) -> Dict[str, Any]:
         """Generate a protocol from query and chemical data"""
         return self.llm_client.generate_protocol(query, chemical_data, explain_mode)

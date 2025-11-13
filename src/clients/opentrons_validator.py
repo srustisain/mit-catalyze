@@ -192,9 +192,10 @@ class OpentronsValidator:
 class OpentronsCodeGenerator:
     """Generates Opentrons code with validation and retry mechanism"""
     
-    def __init__(self, validator: OpentronsValidator = None, mcp_client=None):
+    def __init__(self, validator: OpentronsValidator = None, mcp_client=None, llm_client=None):
         self.validator = validator or OpentronsValidator()
         self.mcp_client = mcp_client
+        self.llm_client = llm_client
         self.logger = logging.getLogger("catalyze.opentrons_generator")
     
     async def generate_with_validation(
@@ -292,16 +293,34 @@ Use this Opentrons documentation as reference:
 
 Requirements:
 1. Create a complete, functional Opentrons protocol
-2. Include proper metadata with protocolName, author, description, and apiLevel
-3. Use appropriate labware and pipettes
+2. Include proper metadata with protocolName, author, description, and apiLevel '2.13'
+3. Use appropriate labware and pipettes based on the protocol needs
 4. Include proper error handling and comments
-5. Make the code production-ready
+5. Make the code production-ready and ready to simulate
+6. Follow Opentrons API best practices
+7. Only include Python code, no explanations
 
-Generate the complete Python code for the protocol:
+Generate the complete Python code for the protocol (ONLY code, starting with imports):
 """
         
-        # Use LLM to generate the code (this would normally use the LLM client)
-        # For now, we'll create a more sophisticated template based on the instructions
+        # Use LLM to generate the code if available
+        if self.llm_client:
+            try:
+                system_message = "You are an expert Opentrons protocol developer. Generate complete, valid Opentrons Python protocols that follow the API specifications exactly."
+                code = self.llm_client.generate_response(prompt, system_message)
+                
+                # Extract code from markdown if present
+                if "```python" in code:
+                    code = code.split("```python")[1].split("```")[0].strip()
+                elif "```" in code:
+                    code = code.split("```")[1].split("```")[0].strip()
+                
+                self.logger.info(f"Generated code using LLM (attempt {attempt + 1})")
+                return code
+            except Exception as e:
+                self.logger.warning(f"LLM generation failed: {e}, falling back to templates")
+        
+        # Fallback to template-based generation if LLM not available
         return self._create_protocol_from_instructions(core_instruction, opentrons_docs, attempt)
     
     async def _get_opentrons_documentation(self, instructions: str) -> str:
