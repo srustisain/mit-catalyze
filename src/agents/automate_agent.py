@@ -269,8 +269,8 @@ The script is ready to use with your Lynx system. Make sure to adjust the plate 
         self.logger.info(f"Processing Opentrons request with LangGraph agent: {instructions[:100]}...")
         self.logger.info(f"Context: Equipment={equipment_details}, Volumes={volume_details}, Labware={labware_details}")
         
-        # Use LangGraph agent to generate code (with MCP tools)
-        max_retries = 3
+        # Use LangGraph agent to generate code (with MCP tools) - reduced retries for speed
+        max_retries = 2  # Reduced from 3 to 2 for faster generation
         for attempt in range(max_retries):
             try:
                 # Create context-aware prompt for Opentrons code generation
@@ -287,10 +287,33 @@ SPECIFIC REQUIREMENTS FROM CONTEXT:
 PREVIOUS CONVERSATION CONTEXT:
 {conversation_context}
 
+VALID OPENTRONS LABWARE (use ONLY these exact names):
+Tube Racks:
+- opentrons_24_tuberack_eppendorf_1.5ml_safelock_snapcap
+- opentrons_24_tuberack_nest_1.5ml_snapcap
+- opentrons_15_tuberack_falcon_15ml_conical
+- opentrons_10_tuberack_falcon_4x50ml_6x15ml_conical
+
+Tip Racks:
+- opentrons_96_tiprack_300ul
+- opentrons_96_tiprack_20ul
+- opentrons_96_filtertiprack_200ul
+- opentrons_96_filtertiprack_20ul
+
+Well Plates:
+- nest_96_wellplate_100ul_pcr_full_skirt
+- nest_96_wellplate_200ul_flat
+- corning_96_wellplate_360ul_flat
+- biorad_96_wellplate_200ul_pcr
+
+Reservoirs:
+- nest_12_reservoir_15ml
+- nest_1_reservoir_195ml
+- usascientific_12_reservoir_22ml
+
 Use the Opentrons MCP documentation tools to find:
-1. Exact labware names and specifications matching the requirements above
-2. Pipette models and their volume ranges appropriate for the specified volumes
-3. Best practices for the specific protocol type
+1. Pipette models and their volume ranges appropriate for the specified volumes
+2. Best practices for the specific protocol type
 
 Requirements:
 1. Use Opentrons API version 2.13

@@ -53,7 +53,7 @@ class PipelineManager:
             return
         
         try:
-            self.logger.info("Initializing Catalyze pipeline...")
+            self.logger.debug("Initializing Catalyze pipeline...")
             
             # Initialize router agent's internal agents (SmartRouter pattern)
             if hasattr(self.router_agent, 'initialize_agents'):

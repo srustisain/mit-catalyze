@@ -13,6 +13,8 @@ import io
 from openai import OpenAI
 
 from src.pipeline import PipelineManager, ModeProcessor
+from src.utils import ConversationMemory
+import uuid
 
 # Try to import Langfuse decorator and client
 try:
@@ -38,6 +40,7 @@ class ChatEndpoints:
         self.mode_processor = ModeProcessor()
         self._initialized = False
         self.openai_client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+        self.conversation_memory = ConversationMemory()  # Entity extraction only - LangGraph handles message history
     
     def _clean_text_formatting(self, text: str) -> str:
         """Clean text formatting while preserving markdown for better readability"""
@@ -136,7 +139,7 @@ class ChatEndpoints:
         if not self._initialized:
             await self.pipeline_manager.initialize()
             self._initialized = True
-            self.logger.info("Chat endpoints initialized")
+            self.logger.debug("Chat endpoints initialized")
     
     @observe()
     async def process_chat_message(self, message: str, mode: str = "research", 
@@ -161,18 +164,33 @@ class ChatEndpoints:
         # Validate and normalize the mode
         validated_mode = self.mode_processor.validate_mode(mode)
         
-        # Generate or retrieve session_id for Langfuse session tracking
-        import uuid
-        session_id = str(uuid.uuid4())
+        # Generate or retrieve thread_id for LangGraph's checkpointer
+        # thread_id enables conversation memory across turns
+        thread_id = None
+        if conversation_history and len(conversation_history) > 0:
+            # Try to extract thread_id from first message metadata
+            if isinstance(conversation_history[0], dict) and "thread_id" in conversation_history[0]:
+                thread_id = conversation_history[0]["thread_id"]
+        
+        if not thread_id:
+            thread_id = str(uuid.uuid4())
+        
+        # Also maintain session_id for Langfuse tracking (can be same as thread_id)
+        session_id = thread_id
+        
+        # Retrieve entity context (LangGraph handles message history automatically)
+        memory_context = self.conversation_memory.get_context(thread_id)
         
         # Prepare context
         context = {
             "mode": validated_mode.value,
-            "conversation_history": conversation_history or [],
+            "conversation_history": conversation_history or [],  # Still pass for backwards compatibility
             "timestamp": datetime.now().isoformat(),
             "pdf_context": pdf_context,
-            "session_id": session_id,  # Add session_id for Langfuse correlation
-            "user_id": "anonymous"  # Can be customized for user tracking
+            "thread_id": thread_id,  # For LangGraph's checkpointer
+            "session_id": session_id,  # For Langfuse correlation
+            "user_id": "anonymous",  # Can be customized for user tracking
+            "memory_context": memory_context  # Entity context only
         }
         
         # Add Langfuse trace metadata if available
@@ -211,13 +229,23 @@ class ChatEndpoints:
             raw_response = result.get("response", "No response generated")
             cleaned_response = self._clean_text_formatting(raw_response)
             
+            # Extract and store entities (LangGraph handles full message history)
+            try:
+                self.conversation_memory.add_message(thread_id, "user", message)
+                self.conversation_memory.add_message(thread_id, "assistant", cleaned_response)
+                self.logger.debug(f"Extracted entities for thread {thread_id[:8]}...")
+            except Exception as e:
+                self.logger.debug(f"Failed to extract entities: {e}")
+            
             response_data = {
                 "response": cleaned_response,
                 "timestamp": result.get("timestamp", datetime.now().isoformat()),
                 "used_mcp": result.get("used_mcp", False),
                 "agent_used": result.get("agent_used", validated_mode.value),
                 "mode": validated_mode.value,
-                "success": result.get("success", True)
+                "success": result.get("success", True),
+                "thread_id": thread_id,  # Include thread_id for conversation continuity
+                "session_id": session_id  # Also include session_id for backwards compatibility
             }
             
             # Add platform-specific code if present

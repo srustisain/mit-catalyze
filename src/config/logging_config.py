@@ -52,6 +52,25 @@ def setup_logging(level: str = "INFO", log_to_file: bool = False, log_file: Opti
     logging.getLogger('openai').setLevel(logging.WARNING)
     logging.getLogger('langchain').setLevel(logging.WARNING)
     logging.getLogger('langgraph').setLevel(logging.WARNING)
+    logging.getLogger('werkzeug').setLevel(logging.WARNING)  # Flask HTTP logs
+    
+    # Set Catalyze component log levels
+    # Only show INFO and above for most components
+    logging.getLogger('catalyze.researchagent').setLevel(logging.INFO)
+    logging.getLogger('catalyze.protocolagent').setLevel(logging.INFO)
+    logging.getLogger('catalyze.automateagent').setLevel(logging.INFO)
+    logging.getLogger('catalyze.safetyagent').setLevel(logging.INFO)
+    logging.getLogger('catalyze.smart_router').setLevel(logging.INFO)
+    logging.getLogger('catalyze.intent_classifier').setLevel(logging.INFO)
+    logging.getLogger('catalyze.pipeline').setLevel(logging.INFO)
+    logging.getLogger('catalyze.api').setLevel(logging.INFO)
+    logging.getLogger('catalyze.flask').setLevel(logging.INFO)
+    
+    # Reduce noise from filtering (only show warnings and errors)
+    logging.getLogger('catalyze.mcp_filter').setLevel(logging.WARNING)
+    
+    # Keep validation logs visible
+    logging.getLogger('catalyze.opentrons_validator').setLevel(logging.INFO)
     
     # Log the configuration
     logging.info(f"Logging configured - Level: {level}, File: {log_file if log_to_file else 'None'}")

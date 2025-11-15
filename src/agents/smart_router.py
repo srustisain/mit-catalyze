@@ -129,11 +129,11 @@ class SmartRouter:
         if self._agents_initialized:
             return
         
-        self.logger.info("Pre-initializing all specialized agents...")
+        self.logger.debug("Pre-initializing all specialized agents...")
         for intent, agent in self.specialized_agents.items():
             try:
                 await agent.initialize()
-                self.logger.info(f"✓ {intent.value} agent ready")
+                self.logger.debug(f"✓ {intent.value} agent ready")
             except Exception as e:
                 self.logger.error(f"Failed to initialize {intent.value} agent: {e}")
         

@@ -13,45 +13,44 @@ from typing import Dict, Any, List, Union
 class MCPResponseFilter:
     """Filter MCP tool responses to essential data only"""
     
-    # Token budget per tool response (was 50K, now max 2K)
-    MAX_TOKENS = 2000
+    # Balanced token budget - enough info to be useful, not excessive
+    MAX_TOKENS = 2000  # Increased from 300 to 2000 for useful responses
     MAX_CHARS = MAX_TOKENS * 4  # Rough estimate: 4 chars per token
     
-    # Limit array sizes
-    MAX_ARRAY_ITEMS = 3
-    MAX_STRING_LENGTH = 500
+    # Return top 3-5 results instead of just 1
+    MAX_ARRAY_ITEMS = 3  # Top 3 results (was 1)
+    MAX_STRING_LENGTH = 200  # Increased from 100 to 200 chars
+    MAX_NESTED_DEPTH = 2  # Allow 2 levels of nesting (was 1)
+    TOTAL_RESPONSE_CHAR_LIMIT = 8000  # Increased from 1500 to 8000 for useful data
     
-    # Essential fields to keep for each ChEMBL data type
+    # Essential fields with more useful information
     ESSENTIAL_FIELDS = {
         'molecule': [
-            'pref_name', 'molecule_chembl_id', 'molecule_properties',
-            'molecule_structures', 'max_phase'
+            'pref_name', 'molecule_chembl_id', 'molecule_type',
+            'molecule_properties', 'molecule_structures'  # Include properties and structures
         ],
         'target': [
-            'pref_name', 'target_chembl_id', 'organism', 
-            'target_type', 'target_components'
+            'pref_name', 'target_chembl_id', 'target_type', 'organism'
         ],
         'activity': [
             'standard_type', 'standard_value', 'standard_units',
-            'pchembl_value', 'molecule_chembl_id'
+            'pchembl_value', 'activity_comment'
         ],
         'assay': [
-            'assay_chembl_id', 'assay_type', 'assay_organism',
-            'description', 'confidence_score'
+            'assay_chembl_id', 'assay_type', 'description'
         ],
         'drug': [
-            'molecule_chembl_id', 'pref_name', 'max_phase',
-            'first_approval', 'indication_class'
+            'molecule_chembl_id', 'pref_name', 'max_phase', 'indication_class'
         ]
     }
     
-    # Nested fields to keep within molecule_properties
+    # Nested fields - more useful properties
     MOLECULE_PROPERTY_FIELDS = [
-        'molecular_weight', 'alogp', 'hba', 'hbd', 
-        'psa', 'rtb', 'full_molformula'
+        'molecular_weight', 'full_molformula', 'alogp', 'hba', 'hbd',
+        'num_ro5_violations'  # Drug-likeness properties
     ]
     
-    # Nested fields to keep within molecule_structures
+    # Nested fields - keep both SMILES and InChI
     MOLECULE_STRUCTURE_FIELDS = [
         'canonical_smiles', 'standard_inchi_key'
     ]
@@ -61,7 +60,7 @@ class MCPResponseFilter:
     
     def filter_response(self, response: Any, tool_name: str = "") -> Any:
         """
-        Filter MCP response to essential data only
+        Filter MCP response to essential data only with aggressive size limits
         
         Args:
             response: Raw MCP tool response
@@ -73,18 +72,49 @@ class MCPResponseFilter:
         if not response:
             return response
         
-        # Handle different response types
+        # Log original size for debugging
+        original_tokens = self.estimate_token_count(response)
+        if original_tokens > 10000:
+            self.logger.warning(f"Large response detected: {original_tokens} tokens from {tool_name}")
+        
+        # Handle different response types with depth tracking
         if isinstance(response, dict):
-            return self._filter_dict(response, tool_name)
+            filtered = self._filter_dict(response, tool_name, depth=0)
         elif isinstance(response, list):
-            return self._filter_list(response, tool_name)
+            filtered = self._filter_list(response, tool_name, depth=0)
         elif isinstance(response, str):
-            return self._filter_string(response)
+            filtered = self._filter_string(response)
         else:
-            return response
+            filtered = response
+        
+        # EMERGENCY TRUNCATION: Hard cap at 3000 chars
+        filtered_str = json.dumps(filtered) if not isinstance(filtered, str) else filtered
+        if len(filtered_str) > self.TOTAL_RESPONSE_CHAR_LIMIT:
+            self.logger.warning(f"Emergency truncation: {len(filtered_str)} chars → {self.TOTAL_RESPONSE_CHAR_LIMIT}")
+            if isinstance(filtered, dict):
+                # Keep only first 2 top-level keys
+                filtered = dict(list(filtered.items())[:2])
+            elif isinstance(filtered, list):
+                # Keep only first item
+                filtered = filtered[:1]
+            else:
+                # Truncate string
+                filtered = filtered_str[:self.TOTAL_RESPONSE_CHAR_LIMIT] + "...[truncated]"
+        
+        # Log reduction stats
+        filtered_tokens = self.estimate_token_count(filtered)
+        if original_tokens > 0:
+            reduction = ((original_tokens - filtered_tokens) / original_tokens * 100)
+            self.logger.info(f"Filtered {tool_name}: {original_tokens}→{filtered_tokens} tokens ({reduction:.0f}% reduction)")
+        
+        return filtered
     
-    def _filter_dict(self, data: Dict[str, Any], tool_name: str = "") -> Dict[str, Any]:
-        """Filter dictionary responses"""
+    def _filter_dict(self, data: Dict[str, Any], tool_name: str = "", depth: int = 0) -> Dict[str, Any]:
+        """Filter dictionary responses with depth tracking"""
+        # Stop recursion if too deep
+        if depth >= self.MAX_NESTED_DEPTH:
+            return {"_truncated": f"Max depth {self.MAX_NESTED_DEPTH} reached"}
+        
         # Detect data type from tool name or structure
         data_type = self._detect_data_type(data, tool_name)
         essential_fields = self.ESSENTIAL_FIELDS.get(data_type, [])
@@ -93,27 +123,27 @@ class MCPResponseFilter:
         
         # Special handling for common response structures
         if 'molecules' in data:
-            # ChEMBL compound search response
-            filtered['molecules'] = self._filter_list(data['molecules'][:self.MAX_ARRAY_ITEMS], 'molecule')
+            # ChEMBL compound search response - ONLY 1 result
+            filtered['molecules'] = self._filter_list(data['molecules'][:self.MAX_ARRAY_ITEMS], 'molecule', depth + 1)
             if 'page_meta' in data:
                 filtered['page_meta'] = {'total_count': data['page_meta'].get('total_count', 0)}
         elif 'targets' in data:
-            # ChEMBL target search response
-            filtered['targets'] = self._filter_list(data['targets'][:self.MAX_ARRAY_ITEMS], 'target')
+            # ChEMBL target search response - ONLY 1 result
+            filtered['targets'] = self._filter_list(data['targets'][:self.MAX_ARRAY_ITEMS], 'target', depth + 1)
         elif 'activities' in data:
-            # ChEMBL activity search response
-            filtered['activities'] = self._filter_list(data['activities'][:self.MAX_ARRAY_ITEMS], 'activity')
+            # ChEMBL activity search response - ONLY 1 result
+            filtered['activities'] = self._filter_list(data['activities'][:self.MAX_ARRAY_ITEMS], 'activity', depth + 1)
         else:
             # Generic filtering - keep only essential fields
             for key, value in data.items():
                 if essential_fields and key not in essential_fields:
                     continue
                 
-                # Recursively filter nested structures
+                # Recursively filter nested structures with depth check
                 if isinstance(value, dict):
-                    filtered[key] = self._filter_nested_dict(key, value)
+                    filtered[key] = self._filter_nested_dict(key, value, depth + 1)
                 elif isinstance(value, list):
-                    filtered[key] = self._filter_list(value[:self.MAX_ARRAY_ITEMS], data_type)
+                    filtered[key] = self._filter_list(value[:self.MAX_ARRAY_ITEMS], data_type, depth + 1)
                 elif isinstance(value, str):
                     filtered[key] = self._filter_string(value)
                 else:
@@ -121,8 +151,12 @@ class MCPResponseFilter:
         
         return filtered
     
-    def _filter_nested_dict(self, key: str, data: Dict[str, Any]) -> Dict[str, Any]:
-        """Filter nested dictionaries with context-specific rules"""
+    def _filter_nested_dict(self, key: str, data: Dict[str, Any], depth: int = 0) -> Dict[str, Any]:
+        """Filter nested dictionaries with context-specific rules and depth tracking"""
+        # Stop recursion if too deep
+        if depth >= self.MAX_NESTED_DEPTH:
+            return {"_truncated": "max_depth"}
+        
         filtered = {}
         
         # Special handling for molecule_properties
@@ -137,10 +171,10 @@ class MCPResponseFilter:
                 if field in data:
                     filtered[field] = data[field]
         
-        # Generic nested dict - keep first 5 fields
+        # Generic nested dict - keep first 3 fields only (was 5)
         else:
             for i, (k, v) in enumerate(data.items()):
-                if i >= 5:
+                if i >= 3:  # Reduced from 5 to 3
                     break
                 if isinstance(v, str):
                     filtered[k] = self._filter_string(v)
@@ -151,19 +185,23 @@ class MCPResponseFilter:
         
         return filtered
     
-    def _filter_list(self, data: List[Any], data_type: str = "") -> List[Any]:
-        """Filter list responses - limit size and filter items"""
+    def _filter_list(self, data: List[Any], data_type: str = "", depth: int = 0) -> List[Any]:
+        """Filter list responses - limit size and filter items with depth tracking"""
         if not data:
             return data
         
-        # Limit array size
+        # Stop recursion if too deep
+        if depth >= self.MAX_NESTED_DEPTH:
+            return ["_truncated_list"]
+        
+        # Limit array size to 1 item only
         limited = data[:self.MAX_ARRAY_ITEMS]
         
         # Filter each item
         filtered = []
         for item in limited:
             if isinstance(item, dict):
-                filtered.append(self._filter_dict(item, data_type))
+                filtered.append(self._filter_dict(item, data_type, depth + 1))
             elif isinstance(item, str):
                 filtered.append(self._filter_string(item))
             else:

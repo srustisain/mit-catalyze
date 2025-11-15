@@ -1,0 +1,66 @@
+{
+  "research-agent-prompt": {
+    "description": "Expert chemistry research and analysis prompt",
+    "config": {
+      "model": "gpt-4o",
+      "temperature": 0.1,
+      "max_tokens": 4000,
+      "agent_type": "research",
+      "response_format": "markdown"
+    },
+    "tags": ["chemistry", "research", "analysis"],
+    "ab_testing": {
+      "enabled": false,
+      "labels": ["production-a", "production-b"],
+      "weights": [0.5, 0.5]
+    }
+  },
+  "protocol-agent-prompt": {
+    "description": "Laboratory protocol and experimental procedure prompt",
+    "config": {
+      "model": "gpt-4o",
+      "temperature": 0.2,
+      "max_tokens": 3000,
+      "agent_type": "protocol",
+      "response_format": "markdown"
+    },
+    "tags": ["laboratory", "protocol", "procedures"],
+    "ab_testing": {
+      "enabled": false,
+      "labels": ["production-a", "production-b"],
+      "weights": [0.5, 0.5]
+    }
+  },
+  "automate-agent-prompt": {
+    "description": "Opentrons OT-2 protocol code generation prompt",
+    "config": {
+      "model": "gpt-4o",
+      "temperature": 0.0,
+      "max_tokens": 2000,
+      "agent_type": "automation",
+      "response_format": "python_code"
+    },
+    "tags": ["opentrons", "automation", "code-generation"],
+    "ab_testing": {
+      "enabled": false,
+      "labels": ["production-a", "production-b"],
+      "weights": [0.5, 0.5]
+    }
+  },
+  "safety-agent-prompt": {
+    "description": "Chemical safety and hazard assessment prompt",
+    "config": {
+      "model": "gpt-4o",
+      "temperature": 0.1,
+      "max_tokens": 3000,
+      "agent_type": "safety",
+      "response_format": "markdown"
+    },
+    "tags": ["safety", "hazards", "assessment"],
+    "ab_testing": {
+      "enabled": false,
+      "labels": ["production-a", "production-b"],
+      "weights": [0.5, 0.5]
+    }
+  }
+}

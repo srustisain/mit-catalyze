@@ -222,7 +222,7 @@ if __name__ == '__main__':
     logger.info("Starting Catalyze Flask application...")
     
     # Pre-initialize all agents at startup to reduce per-query latency
-    logger.info("Pre-initializing agents...")
+    logger.debug("Pre-initializing agents...")
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     try:

@@ -19,6 +19,18 @@ except ImportError:
     OPENTRONS_AVAILABLE = False
     logging.warning("Opentrons package not available. Simulation validation will be disabled.")
 
+# Langfuse integration for tracing
+try:
+    from langfuse.decorators import observe
+    LANGFUSE_AVAILABLE = True
+except ImportError:
+    # No-op decorator if Langfuse not available
+    def observe(*args, **kwargs):
+        def decorator(func):
+            return func
+        return decorator if not args else decorator(args[0])
+    LANGFUSE_AVAILABLE = False
+
 
 @dataclass
 class ValidationResult:
@@ -41,9 +53,10 @@ class OpentronsValidator:
         if not OPENTRONS_AVAILABLE:
             self.logger.warning("Opentrons package not available. Validation will be disabled.")
     
+    @observe(as_type="span", name="opentrons_validation")
     async def validate_code(self, code: str) -> ValidationResult:
         """
-        Validate Opentrons protocol code using simulation
+        Validate Opentrons protocol code using simulation with Langfuse tracing
         
         Args:
             code: Python code containing Opentrons protocol
@@ -83,7 +96,23 @@ class OpentronsValidator:
                 
                 simulation_time = (datetime.now() - start_time).total_seconds()
                 
-                self.logger.info(f"Opentrons validation completed in {simulation_time:.2f}s")
+                # Log metadata to Langfuse
+                if LANGFUSE_AVAILABLE:
+                    try:
+                        from langfuse.decorators import langfuse_context
+                        langfuse_context.update_current_observation(
+                            metadata={
+                                "code_length": len(code),
+                                "simulation_time_seconds": simulation_time,
+                                "error_count": len(errors),
+                                "warning_count": len(warnings),
+                                "success": len(errors) == 0
+                            }
+                        )
+                    except Exception as e:
+                        self.logger.debug(f"Failed to update Langfuse metadata: {e}")
+                
+                self.logger.info(f"Opentrons validation completed in {simulation_time:.2f}s - {len(errors)} errors, {len(warnings)} warnings")
                 
                 return ValidationResult(
                     success=len(errors) == 0,
@@ -114,8 +143,9 @@ class OpentronsValidator:
                 simulation_time=(datetime.now() - start_time).total_seconds()
             )
     
+    @observe(as_type="span", name="analyze_runlog")
     def _analyze_runlog(self, runlog: List[Dict[str, Any]]) -> Tuple[List[str], List[str]]:
-        """Analyze runlog for errors and warnings"""
+        """Analyze runlog for errors and warnings with tracing"""
         errors = []
         warnings = []
         
@@ -134,8 +164,9 @@ class OpentronsValidator:
         
         return errors, warnings
     
+    @observe(as_type="span", name="generate_suggestions")
     def _generate_suggestions(self, errors: List[str], warnings: List[str]) -> List[str]:
-        """Generate improvement suggestions based on errors and warnings"""
+        """Generate improvement suggestions based on errors and warnings with tracing"""
         suggestions = []
         
         for error in errors:
