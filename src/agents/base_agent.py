@@ -15,7 +15,6 @@ from datetime import datetime
 
 from src.clients.llm_client import LLMClient
 from src.config.config import OPENAI_MODEL, MCP_SERVERS, LANGFUSE_ENABLED, OPENAI_API_KEY
-from src.utils.mcp_response_filter import MCPResponseFilter
 from src.evaluation.async_scorer import AsyncScorer
 from langgraph.prebuilt import create_react_agent
 from langgraph.checkpoint.memory import MemorySaver
@@ -55,9 +54,6 @@ class BaseAgent(ABC):
         # MCP client for tool access
         self.mcp_client = None
         self.agent = None
-        
-        # MCP response filter to reduce token usage (50K -> 2K tokens)
-        self.response_filter = MCPResponseFilter()
         
         # LangGraph memory checkpointer for conversation state
         self.checkpointer = MemorySaver()
@@ -103,14 +99,11 @@ class BaseAgent(ABC):
             self.logger.debug(f"{self.name} - MCP client loaded {len(available_tools)} total tools from {list(server_config.keys())}")
             self.logger.debug(f"{self.name} - Available tool names: {[tool.name for tool in available_tools]}")
             
-            # Filter tools based on agent specialization
+            # Filter tools based on agent specialization (if specific tools are requested)
             if self.tools:
                 available_tools = [tool for tool in available_tools if tool.name in self.tools]
                 self.logger.debug(f"{self.name} - Filtered to {len(available_tools)} tools matching {self.tools}")
                 self.logger.debug(f"{self.name} - Filtered tool names: {[tool.name for tool in available_tools]}")
-            
-            # Wrap tools with response filtering to reduce token usage
-            available_tools = self._wrap_tools_with_filtering(available_tools)
             
             self.logger.debug(f"Initialized {self.name} with {len(available_tools)} tools from {list(server_config.keys())}")
             
@@ -139,77 +132,36 @@ class BaseAgent(ABC):
     
     def _get_agent_server_config(self) -> Dict[str, Any]:
         """Get the appropriate MCP server configuration for this agent"""
-        # ChEMBL tools for research, protocol, and safety agents
-        chembl_tools = ["search_compounds", "get_compound_info", "search_targets", "get_target_info", 
-                        "search_activities", "get_assay_info", "search_drugs", "get_drug_info"]
+        # Determine server based on agent name (simpler and more reliable)
+        agent_name_lower = self.name.lower()
         
-        # Opentrons tools for automate agent
-        opentrons_tools = ["fetch_general", "list_documents", "search_document"]
+        # ChEMBL agents: ResearchAgent, ProtocolAgent, SafetyAgent
+        if any(name in agent_name_lower for name in ["research", "protocol", "safety"]):
+            if "chembl" in MCP_SERVERS:
+                return {"chembl": MCP_SERVERS["chembl"]}
         
-        # Check if this agent uses ChEMBL tools
-        if any(tool in self.tools for tool in chembl_tools):
-            return {"chembl": MCP_SERVERS["chembl"]}
+        # Opentrons agent: AutomateAgent
+        if "automate" in agent_name_lower:
+            if "opentrons" in MCP_SERVERS:
+                return {"opentrons": MCP_SERVERS["opentrons"]}
         
-        # Check if this agent uses Opentrons tools
-        if any(tool in self.tools for tool in opentrons_tools):
-            return {"opentrons": MCP_SERVERS["opentrons"]}
+        # Fallback: Check tools if specified (for backward compatibility)
+        if self.tools:
+            chembl_tools = ["search_compounds", "get_compound_info", "search_targets", "get_target_info", 
+                            "search_activities", "get_assay_info", "search_drugs", "get_drug_info"]
+            opentrons_tools = ["fetch_general", "list_documents", "search_document"]
+            
+            if any(tool in self.tools for tool in chembl_tools):
+                if "chembl" in MCP_SERVERS:
+                    return {"chembl": MCP_SERVERS["chembl"]}
+            
+            if any(tool in self.tools for tool in opentrons_tools):
+                if "opentrons" in MCP_SERVERS:
+                    return {"opentrons": MCP_SERVERS["opentrons"]}
         
-        # Default to no servers if no matching tools
+        # Default to no servers if no match
         return {}
     
-    def _wrap_tools_with_filtering(self, tools: List[Any]) -> List[Any]:
-        """Wrap MCP tools with aggressive response filtering to prevent 100K+ token responses"""
-        from langchain_core.tools import StructuredTool
-        
-        wrapped_tools = []
-        for tool in tools:
-            # Create wrapper class that inherits from the tool's class
-            # This ensures we maintain all LangChain tool functionality
-            class FilteredTool(tool.__class__):
-                def __init__(self, original_tool, response_filter, logger):
-                    # Copy all attributes from original tool
-                    self.__dict__.update(original_tool.__dict__)
-                    self._original_tool = original_tool
-                    self._response_filter = response_filter
-                    self._logger = logger
-                
-                async def _arun(self, *args, config=None, **kwargs):
-                    """Async run with filtering - config parameter required by LangChain"""
-                    try:
-                        # Call original tool's _arun with config
-                        result = await self._original_tool._arun(*args, config=config, **kwargs)
-                        
-                        # Log original size (only if large)
-                        original_tokens = self._response_filter.estimate_token_count(result)
-                        
-                        if original_tokens > 10000:
-                            self._logger.warning(f"⚠️  {self.name} returned {original_tokens} tokens - applying filtering")
-                        
-                        # Apply filtering
-                        filtered = self._response_filter.filter_response(result, self.name)
-                        filtered_tokens = self._response_filter.estimate_token_count(filtered)
-                        
-                        # Log final result (only if significant reduction)
-                        if original_tokens > 10000:
-                            reduction = ((original_tokens - filtered_tokens) / original_tokens * 100) if original_tokens > 0 else 0
-                            self._logger.info(f"✂️  {self.name}: {original_tokens}→{filtered_tokens} tokens ({reduction:.0f}% reduction)")
-                        
-                        return filtered
-                    except Exception as e:
-                        self._logger.error(f"Tool {self.name} failed: {e}")
-                        raise
-                
-                def _run(self, *args, config=None, **kwargs):
-                    """Sync run with filtering - config parameter required by LangChain"""
-                    # For sync calls, just call original (most MCP tools are async)
-                    return self._original_tool._run(*args, config=config, **kwargs)
-            
-            # Create wrapped tool instance
-            wrapped_tool = FilteredTool(tool, self.response_filter, self.logger)
-            wrapped_tools.append(wrapped_tool)
-        
-        self.logger.debug(f"Wrapped {len(wrapped_tools)} tools with response filtering")
-        return wrapped_tools
     
     @abstractmethod
     async def process_query(self, query: str, context: Dict[str, Any] = None) -> Dict[str, Any]:
@@ -270,23 +222,7 @@ class BaseAgent(ABC):
             prompt_template = self._get_fallback_prompt(class_name)
             prompt_data = {"prompt": prompt_template, "config": {}, "version": None, "name": class_name}
         
-        # Add brevity instruction if in brief mode
-        if context and context.get("brevity_mode"):
-            prompt_template += """
-
-### Response Style Guidelines
-For simple, straightforward questions:
-- Provide a concise 2-3 sentence summary with key facts only
-- Include only the most essential information
-- Avoid excessive detail unless specifically requested
-- Be direct and to the point
-
-For detailed requests (containing words like "detailed", "comprehensive", "explain in depth"):
-- Provide comprehensive information with all relevant details
-- Include examples, citations, and thorough explanations
-"""
-        
-        # Update prompt_data with modified template
+        # Return prompt data
         prompt_data["prompt"] = prompt_template
         return prompt_data
     
@@ -331,17 +267,6 @@ Please format your responses in well-structured markdown for better readability.
             prompt_data = self.get_system_prompt(context)
             system_prompt = prompt_data["prompt"]
             
-            # Add tool usage guidelines to prevent redundant calls
-            system_prompt += """
-
-### Tool Usage Guidelines - CRITICAL
-- Call each tool ONCE with the best query you can formulate
-- NEVER retry the same tool call with identical arguments
-- If a tool returns limited data (e.g., 3 compounds), that's sufficient - work with it
-- Summarize whatever information you receive, even if incomplete
-- ChEMBL may not have complete data - that's normal, just report what you found
-"""
-            
             if context and context.get("memory_context"):
                 memory_context = context["memory_context"]
                 system_prompt += f"\n\n### Previous Conversation Context\n{memory_context}"
@@ -354,7 +279,7 @@ Please format your responses in well-structured markdown for better readability.
             # Prepare config with thread_id for LangGraph memory and Langfuse callbacks
             config = {
                 "configurable": {},
-                "recursion_limit": 35  # Increased from default 25 to allow more iterations
+                "recursion_limit": 10  # Limit to 10 iterations max to prevent redundant tool calls
             }
             
             # Set thread_id for LangGraph's checkpointer (enables conversation memory)

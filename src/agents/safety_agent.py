@@ -26,13 +26,7 @@ class SafetyAgent(BaseAgent):
         super().__init__(
             name="SafetyAgent",
             description="Specialized in safety analysis, hazard assessment, and safety protocol recommendations",
-            tools=[
-                "search_compounds",
-                "get_compound_info",
-                "search_activities",
-                "get_assay_info",
-                "search_drugs"
-            ]
+            tools=None  # Use all available ChEMBL tools
         )
     
     @observe()

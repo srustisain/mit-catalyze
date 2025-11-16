@@ -26,68 +26,15 @@ class ResearchAgent(BaseAgent):
         super().__init__(
             name="ResearchAgent",
             description="Specialized in chemistry research questions, chemical properties, and explanations",
-            tools=[
-                "search_compounds",
-                "get_compound_info", 
-                "search_targets",
-                "get_target_info",
-                "search_activities"
-            ]
+            tools=None  # Use all available ChEMBL tools
         )
-    
-    def _is_simple_query(self, query: str) -> bool:
-        """
-        Detect if query is simple (brief response) or detailed (comprehensive response)
-        
-        Returns:
-            True if query is simple and should get brief response
-        """
-        query_lower = query.lower().strip()
-        
-        # Simple query patterns
-        simple_patterns = [
-            "what is", "what's", "define", "tell me about", "explain",
-            "who is", "when was", "where is", "how much"
-        ]
-        
-        # Detailed query patterns (override simple)
-        detailed_patterns = [
-            "detailed", "comprehensive", "explain in depth", "all information",
-            "complete", "thorough", "extensively", "in detail", "step by step"
-        ]
-        
-        # Check for detailed patterns first (higher priority)
-        has_detailed = any(pattern in query_lower for pattern in detailed_patterns)
-        if has_detailed:
-            return False  # Not simple, needs detailed response
-        
-        # Check for simple patterns
-        has_simple = any(pattern in query_lower for pattern in simple_patterns)
-        
-        # Additional heuristics
-        word_count = len(query.split())
-        has_question_mark = "?" in query
-        
-        # Simple if: has simple pattern, is short (<15 words), and is a question
-        is_simple = has_simple and word_count < 15 and has_question_mark
-        
-        return is_simple
     
     @observe()
     async def process_query(self, query: str, context: Dict[str, Any] = None) -> Dict[str, Any]:
         """Process chemistry research questions"""
         
-        # Detect if this is a simple query for brevity control
-        is_simple = self._is_simple_query(query)
-        
-        # Add brevity instruction to context if simple query
         if context is None:
             context = {}
-        
-        if is_simple:
-            # Enable brevity mode for simple queries
-            context["brevity_mode"] = True
-            self.logger.info(f"Simple query detected - enabling brief response mode")
         
         # Check for PDF context
         pdf_context = context.get("pdf_context") if context else None

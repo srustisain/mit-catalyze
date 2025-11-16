@@ -26,13 +26,7 @@ class ProtocolAgent(BaseAgent):
         super().__init__(
             name="ProtocolAgent",
             description="Specialized in generating lab protocols, experimental procedures, and methods",
-            tools=[
-                "search_compounds",
-                "get_compound_info",
-                "search_activities", 
-                "get_assay_info",
-                "search_drugs"
-            ]
+            tools=None  # Use all available ChEMBL tools
         )
     
     @observe()
