@@ -99,11 +99,26 @@ class BaseAgent(ABC):
             self.logger.debug(f"{self.name} - MCP client loaded {len(available_tools)} total tools from {list(server_config.keys())}")
             self.logger.debug(f"{self.name} - Available tool names: {[tool.name for tool in available_tools]}")
             
+            # Filter out non-functional tools (like search_drugs which returns "not yet implemented")
+            non_functional_tools = ['search_drugs']  # Add more as needed
+            available_tools = [tool for tool in available_tools if tool.name not in non_functional_tools]
+            if non_functional_tools:
+                self.logger.info(f"🚫 {self.name} filtered out non-functional tools: {non_functional_tools}")
+            
             # Filter tools based on agent specialization (if specific tools are requested)
             if self.tools:
+                available_tool_names = [tool.name for tool in available_tools]
+                requested_tools = self.tools
+                missing_tools = [t for t in requested_tools if t not in available_tool_names]
+                
+                if missing_tools:
+                    self.logger.warning(f"⚠️  {self.name} requested tools not found: {missing_tools}")
+                    self.logger.warning(f"   Available tools from MCP: {available_tool_names}")
+                
                 available_tools = [tool for tool in available_tools if tool.name in self.tools]
-                self.logger.debug(f"{self.name} - Filtered to {len(available_tools)} tools matching {self.tools}")
-                self.logger.debug(f"{self.name} - Filtered tool names: {[tool.name for tool in available_tools]}")
+                self.logger.info(f"✅ {self.name} filtered to {len(available_tools)} tools: {[t.name for t in available_tools]}")
+            else:
+                self.logger.info(f"✅ {self.name} using all {len(available_tools)} available tools: {[t.name for t in available_tools]}")
             
             self.logger.debug(f"Initialized {self.name} with {len(available_tools)} tools from {list(server_config.keys())}")
             
@@ -142,22 +157,22 @@ class BaseAgent(ABC):
         
         # Opentrons agent: AutomateAgent
         if "automate" in agent_name_lower:
-            if "opentrons" in MCP_SERVERS:
-                return {"opentrons": MCP_SERVERS["opentrons"]}
+            if "opentrons_python_api" in MCP_SERVERS:
+                return {"opentrons_python_api": MCP_SERVERS["opentrons_python_api"]}
         
         # Fallback: Check tools if specified (for backward compatibility)
         if self.tools:
             chembl_tools = ["search_compounds", "get_compound_info", "search_targets", "get_target_info", 
                             "search_activities", "get_assay_info", "search_drugs", "get_drug_info"]
-            opentrons_tools = ["fetch_general", "list_documents", "search_document"]
+            opentrons_tools = ["search_opentrons_docs", "get_opentrons_api_reference", "get_opentrons_example", "update_opentrons_docs"]
             
             if any(tool in self.tools for tool in chembl_tools):
                 if "chembl" in MCP_SERVERS:
                     return {"chembl": MCP_SERVERS["chembl"]}
             
             if any(tool in self.tools for tool in opentrons_tools):
-                if "opentrons" in MCP_SERVERS:
-                    return {"opentrons": MCP_SERVERS["opentrons"]}
+                if "opentrons_python_api" in MCP_SERVERS:
+                    return {"opentrons_python_api": MCP_SERVERS["opentrons_python_api"]}
         
         # Default to no servers if no match
         return {}
@@ -210,20 +225,32 @@ class BaseAgent(ABC):
                     label="production"
                 )
             
-            if prompt_data["prompt"]:
+            if prompt_data.get("prompt"):
                 prompt_template = prompt_data["prompt"]
-                self.logger.debug(f"Using Langfuse prompt {langfuse_prompt_name} v{prompt_data.get('version', 'unknown')}")
+                # Check if Langfuse prompt has tool instructions - if not, use local file
+                if "CRITICAL: Use Available Tools" not in prompt_template and "MUST use the available tools" not in prompt_template and class_name == "ProtocolAgent":
+                    self.logger.info(f"Langfuse prompt missing tool instructions, using local file for {class_name}")
+                    prompt_template = self._get_fallback_prompt(class_name)
+                    prompt_data = {"prompt": prompt_template, "config": {}, "version": None, "name": langfuse_prompt_name}
+                else:
+                    # Log prompt source clearly
+                    version = prompt_data.get('version', 'unknown')
+                    source = f"Langfuse prompt: {langfuse_prompt_name} v{version} (production)"
+                    self.logger.info(f"📝 {self.name} - {source}")
             else:
                 # Fallback to local file
                 prompt_template = self._get_fallback_prompt(class_name)
                 prompt_data = {"prompt": prompt_template, "config": {}, "version": None, "name": langfuse_prompt_name}
+                self.logger.info(f"📝 {self.name} - Using local file: src/prompts/{class_name.lower().replace('agent', '_agent')}.txt")
         else:
             # Fallback for unmapped agents
             prompt_template = self._get_fallback_prompt(class_name)
             prompt_data = {"prompt": prompt_template, "config": {}, "version": None, "name": class_name}
+            self.logger.info(f"📝 {self.name} - Using fallback prompt")
         
-        # Return prompt data
+        # Return prompt data with source tracking
         prompt_data["prompt"] = prompt_template
+        prompt_data["source"] = "langfuse" if prompt_data.get("langfuse_prompt") else "local_file" if langfuse_prompt_name else "fallback"
         return prompt_data
     
     def _get_fallback_prompt(self, class_name: str) -> str:
@@ -302,36 +329,78 @@ Please format your responses in well-structured markdown for better readability.
                 if context and context.get("session_id"):
                     self.langfuse_handler.session_id = context["session_id"]
             
-            # Invoke LangGraph agent with memory
-            # Note: LangGraph's checkpointer automatically manages conversation history
-            # No need to manually pass conversation_history - it's stored in the checkpoint
-            result = await self.agent.ainvoke({"messages": messages}, config=config)
+            # Show spinner animation (for terminal output)
+            import sys
+            import threading
+            import time
             
-            # Extract final response from messages
-            final_messages = result.get("messages", [])
+            spinner_chars = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏']
+            spinner_running = True
+            spinner_index = 0
+            
+            def update_spinner():
+                """Update spinner in place"""
+                nonlocal spinner_index
+                while spinner_running:
+                    char = spinner_chars[spinner_index % len(spinner_chars)]
+                    sys.stdout.write(f'\r🤖 {self.name} processing... {char}')
+                    sys.stdout.flush()
+                    spinner_index += 1
+                    time.sleep(0.1)
+            
+            # Start spinner thread
+            spinner_thread = threading.Thread(target=update_spinner, daemon=True)
+            spinner_thread.start()
+            
+            try:
+                # Invoke LangGraph agent
+                result = await self.agent.ainvoke({"messages": messages}, config=config)
+            finally:
+                # Stop spinner and clear line
+                spinner_running = False
+                time.sleep(0.15)  # Let spinner finish current cycle
+                sys.stdout.write('\r' + ' ' * 60 + '\r')  # Clear spinner line
+                sys.stdout.flush()
+            
+            # Extract final response from result
+            final_messages = result.get("messages", []) if result else []
+            tool_calls_made = []
+            
+            # Extract tool calls from messages
+            for message in final_messages:
+                if hasattr(message, 'tool_calls') and message.tool_calls:
+                    for tool_call in message.tool_calls:
+                        # Handle both dict and object formats
+                        if isinstance(tool_call, dict):
+                            tool_name = tool_call.get('name', 'unknown')
+                            tool_args = tool_call.get('args', {})
+                            tool_id = tool_call.get('id', 'unknown')
+                        else:
+                            tool_name = getattr(tool_call, 'name', 'unknown')
+                            tool_args = getattr(tool_call, 'args', {})
+                            tool_id = getattr(tool_call, 'id', 'unknown')
+                        
+                        tool_calls_made.append({
+                            'tool_name': tool_name,
+                            'args': tool_args,
+                            'id': tool_id
+                        })
+            
+            # Extract response text
             if final_messages:
                 last_message = final_messages[-1]
                 response_text = last_message.content if hasattr(last_message, 'content') else str(last_message)
             else:
                 response_text = "No response generated"
             
-            # Log the result (debug level for routine operations)
-            messages = result.get("messages", [])
-            self.logger.debug(f"{self.name} completed with {len(messages)} messages")
+            # Log completion summary
+            self.logger.info(f"✓ {self.name} completed with {len(final_messages)} messages")
             
-            # Log tool calls at debug level
-            tool_calls_made = []
-            for message in messages:
-                if hasattr(message, 'tool_calls') and message.tool_calls:
-                    for tool_call in message.tool_calls:
-                        tool_calls_made.append({
-                            'tool_name': tool_call.get('name', 'unknown'),
-                            'args': tool_call.get('args', {}),
-                            'id': tool_call.get('id', 'unknown')
-                        })
-            
+            # Log tool usage summary
             if tool_calls_made:
-                self.logger.debug(f"{self.name} made {len(tool_calls_made)} tool calls: {[tc['tool_name'] for tc in tool_calls_made]}")
+                self.logger.info(f"🔧 {self.name} made {len(tool_calls_made)} tool calls: {[tc['tool_name'] for tc in tool_calls_made]}")
+            else:
+                self.logger.warning(f"⚠️  {self.name} completed WITHOUT using any tools")
             
             # Trigger async scoring (non-blocking, fire-and-forget)
             if LANGFUSE_ENABLED:
@@ -346,14 +415,23 @@ Please format your responses in well-structured markdown for better readability.
                     # Silently fail - scoring should never interrupt main flow
                     self.logger.debug(f"Async scoring trigger failed: {e}")
             
-            return {
+            # Add prompt metadata to response
+            response_data = {
                 "success": True,
                 "response": response_text,
                 "messages": final_messages,
                 "agent": self.name,
                 "tool_calls": tool_calls_made,
-                "timestamp": datetime.now().isoformat()
+                "timestamp": datetime.now().isoformat(),
+                "prompt_metadata": {
+                    "source": prompt_data.get("source", "unknown"),
+                    "name": prompt_data.get("name", "unknown"),
+                    "version": prompt_data.get("version"),
+                    "has_langfuse_prompt": bool(prompt_data.get("langfuse_prompt"))
+                }
             }
+            
+            return response_data
             
         except Exception as e:
             self.logger.error(f"Error in {self.name}: {e}")

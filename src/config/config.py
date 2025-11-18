@@ -46,7 +46,7 @@ APP_DESCRIPTION = "Transform research questions into lab protocols and automatio
 # Get absolute paths for MCP servers
 _PROJECT_ROOT = pathlib.Path(__file__).parent.parent.parent
 _CHEMBL_SERVER_PATH = str(_PROJECT_ROOT / "mcp_servers" / "chembl-mcp-server" / "build" / "index.js")
-_OPENTRONS_SERVER_PATH = str(_PROJECT_ROOT / "mcp_servers" / "opentrons-mcp-server" / "dist" / "index.js")
+_OPENTRONS_PYTHON_API_SERVER_PATH = str(_PROJECT_ROOT / "mcp_servers" / "opentrons-python-api-mcp-server" / "dist" / "index.js")
 
 MCP_SERVERS = {
     "chembl": {
@@ -55,10 +55,10 @@ MCP_SERVERS = {
         "args": [_CHEMBL_SERVER_PATH]
     },
     
-    "opentrons": {
+    "opentrons_python_api": {
         "transport": "stdio",
         "command": "node",
-        "args": [_OPENTRONS_SERVER_PATH]
+        "args": [_OPENTRONS_PYTHON_API_SERVER_PATH]
     }
     
     # Example HTTP-based MCP servers (commented out for now)

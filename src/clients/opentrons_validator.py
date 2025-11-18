@@ -53,13 +53,59 @@ class OpentronsValidator:
         if not OPENTRONS_AVAILABLE:
             self.logger.warning("Opentrons package not available. Validation will be disabled.")
     
+    def _validate_deck_slots(self, code: str, platform: str = "ot2") -> Tuple[List[str], List[str]]:
+        """
+        Pre-validate deck slot names in the code before simulation
+        
+        Args:
+            code: Python code to validate
+            platform: 'ot2' or 'flex'
+            
+        Returns:
+            Tuple of (errors, warnings) lists
+        """
+        import re
+        
+        errors = []
+        warnings = []
+        
+        # Define valid slots for each platform
+        if platform == "ot2":
+            valid_slots = {'1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11'}
+            invalid_pattern = r"load_labware\([^,]+,\s*['\"]([A-Z]\d+)['\"]"  # Flex-style slots
+        else:  # flex
+            valid_slots = {'A1', 'A2', 'A3', 'B1', 'B2', 'B3', 'C1', 'C2', 'C3', 'D1', 'D2', 'D3'}
+            invalid_pattern = r"load_labware\([^,]+,\s*['\"](\d+)['\"]"  # OT-2 style slots
+        
+        # Find all load_labware calls
+        load_pattern = r"load_labware\([^,]+,\s*['\"]([^'\"]+)['\"]"
+        matches = re.findall(load_pattern, code)
+        
+        for slot in matches:
+            if slot not in valid_slots:
+                if platform == "ot2":
+                    errors.append(f"Invalid deck slot '{slot}' for OT-2. Valid slots are: {', '.join(sorted(valid_slots, key=lambda x: int(x)))}")
+                else:
+                    errors.append(f"Invalid deck slot '{slot}' for Flex. Valid slots are: {', '.join(sorted(valid_slots))}")
+        
+        # Check for wrong platform slots
+        wrong_platform_matches = re.findall(invalid_pattern, code)
+        if wrong_platform_matches:
+            if platform == "ot2":
+                errors.append(f"Found Flex-style coordinate slots ({', '.join(wrong_platform_matches)}) in OT-2 code. Use numeric slots 1-11.")
+            else:
+                errors.append(f"Found OT-2 style numeric slots ({', '.join(wrong_platform_matches)}) in Flex code. Use coordinate slots A1-D3.")
+        
+        return errors, warnings
+    
     @observe(as_type="span", name="opentrons_validation")
-    async def validate_code(self, code: str) -> ValidationResult:
+    async def validate_code(self, code: str, platform: str = "ot2") -> ValidationResult:
         """
         Validate Opentrons protocol code using simulation with Langfuse tracing
         
         Args:
             code: Python code containing Opentrons protocol
+            platform: 'ot2' or 'flex' - the target Opentrons platform
             
         Returns:
             ValidationResult with validation status and details
@@ -73,6 +119,21 @@ class OpentronsValidator:
             )
         
         start_time = datetime.now()
+        
+        # Pre-validate deck slots before simulation
+        slot_errors, slot_warnings = self._validate_deck_slots(code, platform)
+        if slot_errors:
+            self.logger.error(f"Deck slot validation failed: {slot_errors}")
+            return ValidationResult(
+                success=False,
+                errors=slot_errors,
+                warnings=slot_warnings,
+                suggestions=[
+                    f"Use correct deck slot naming for {platform.upper()}",
+                    "Check all load_labware() calls for proper slot format"
+                ],
+                simulation_time=(datetime.now() - start_time).total_seconds()
+            )
         
         try:
             # Create temporary file for the protocol
@@ -233,6 +294,7 @@ class OpentronsCodeGenerator:
         self, 
         instructions: str, 
         context: Dict[str, Any] = None,
+        platform: str = "ot2",
         max_retries: int = 3
     ) -> Dict[str, Any]:
         """
@@ -241,12 +303,13 @@ class OpentronsCodeGenerator:
         Args:
             instructions: Protocol instructions
             context: Additional context for generation
+            platform: 'ot2' or 'flex' - target Opentrons platform
             max_retries: Maximum number of retry attempts
             
         Returns:
             Dictionary containing generation result and metadata
         """
-        self.logger.info(f"Starting Opentrons code generation with {max_retries} retries")
+        self.logger.info(f"Starting Opentrons code generation for {platform.upper()} with {max_retries} retries")
         
         # Store the original instruction
         original_instruction = instructions
@@ -255,10 +318,10 @@ class OpentronsCodeGenerator:
             try:
                 # Generate code (this would be done by the MCP server)
                 # For now, we'll simulate this step
-                code = await self._generate_code(instructions, context, attempt)
+                code = await self._generate_code(instructions, context, attempt, platform)
                 
-                # Validate the generated code
-                validation_result = await self.validator.validate_code(code)
+                # Validate the generated code with platform info
+                validation_result = await self.validator.validate_code(code, platform=platform)
                 
                 if validation_result.success:
                     self.logger.info(f"Opentrons code generated successfully on attempt {attempt + 1}")
@@ -306,7 +369,7 @@ class OpentronsCodeGenerator:
                         "timestamp": datetime.now().isoformat()
                     }
     
-    async def _generate_code(self, instructions: str, context: Dict[str, Any], attempt: int) -> str:
+    async def _generate_code(self, instructions: str, context: Dict[str, Any], attempt: int, platform: str = "ot2") -> str:
         """Generate Opentrons code using MCP server documentation and LLM"""
         
         # Extract core instruction (remove any error context from retries)
@@ -319,6 +382,8 @@ class OpentronsCodeGenerator:
         prompt = f"""
 Generate a complete Opentrons protocol based on these instructions: {core_instruction}
 
+Target Platform: {platform.upper()}
+
 Use this Opentrons documentation as reference:
 {opentrons_docs}
 
@@ -330,6 +395,7 @@ Requirements:
 5. Make the code production-ready and ready to simulate
 6. Follow Opentrons API best practices
 7. Only include Python code, no explanations
+8. Use correct deck slot naming for {platform.upper()}: {'numeric slots 1-11' if platform == 'ot2' else 'coordinate slots A1-D3'}
 
 Generate the complete Python code for the protocol (ONLY code, starting with imports):
 """
@@ -337,7 +403,7 @@ Generate the complete Python code for the protocol (ONLY code, starting with imp
         # Use LLM to generate the code if available
         if self.llm_client:
             try:
-                system_message = "You are an expert Opentrons protocol developer. Generate complete, valid Opentrons Python protocols that follow the API specifications exactly."
+                system_message = f"You are an expert Opentrons protocol developer. Generate complete, valid Opentrons Python protocols for {platform.upper()} that follow the API specifications exactly."
                 code = self.llm_client.generate_response(prompt, system_message)
                 
                 # Extract code from markdown if present
@@ -349,10 +415,11 @@ Generate the complete Python code for the protocol (ONLY code, starting with imp
                 self.logger.info(f"Generated code using LLM (attempt {attempt + 1})")
                 return code
             except Exception as e:
-                self.logger.warning(f"LLM generation failed: {e}, falling back to templates")
+                self.logger.error(f"LLM generation failed: {e}")
+                raise Exception(f"Code generation failed: LLM client not available or generation error: {e}")
         
-        # Fallback to template-based generation if LLM not available
-        return self._create_protocol_from_instructions(core_instruction, opentrons_docs, attempt)
+        # If no LLM client, raise an error
+        raise Exception("Code generation failed: LLM client not initialized")
     
     async def _get_opentrons_documentation(self, instructions: str) -> str:
         """Get relevant Opentrons documentation from MCP server"""
@@ -367,401 +434,162 @@ Generate the complete Python code for the protocol (ONLY code, starting with imp
             tools = await self.mcp_client.get_tools()
             self.logger.info(f"🔧 OpentronsGenerator - Available tools: {[tool.name for tool in tools]}")
             
-            # Find Opentrons-related tools
-            opentrons_tools = [tool for tool in tools if 'opentrons' in tool.name.lower() or 'fetch_general' in tool.name.lower() or 'list_documents' in tool.name.lower() or 'search_document' in tool.name.lower()]
-            self.logger.info(f"🔧 OpentronsGenerator - Found {len(opentrons_tools)} Opentrons tools: {[tool.name for tool in opentrons_tools]}")
+            # Find Opentrons Python API documentation tools
+            search_tool = None
+            api_ref_tool = None
+            example_tool = None
             
-            if not opentrons_tools:
-                self.logger.warning("🔧 OpentronsGenerator - No Opentrons tools available")
-                return "No Opentrons tools available"
+            for tool in tools:
+                tool_name_lower = tool.name.lower()
+                if 'search_opentrons_docs' in tool_name_lower:
+                    search_tool = tool
+                    self.logger.info(f"🔧 OpentronsGenerator - Found search_opentrons_docs tool: {tool.name}")
+                elif 'get_opentrons_api_reference' in tool_name_lower:
+                    api_ref_tool = tool
+                    self.logger.info(f"🔧 OpentronsGenerator - Found get_opentrons_api_reference tool: {tool.name}")
+                elif 'get_opentrons_example' in tool_name_lower:
+                    example_tool = tool
+                    self.logger.info(f"🔧 OpentronsGenerator - Found get_opentrons_example tool: {tool.name}")
             
-            # Try to get general information
-            general_info = ""
-            for tool in opentrons_tools:
-                if 'fetch_general' in tool.name.lower():
-                    try:
-                        self.logger.info(f"🔧 OpentronsGenerator - Calling {tool.name}...")
-                        result = await tool.ainvoke({})
-                        if result:
-                            general_info = str(result)
-                            self.logger.info(f"🔧 OpentronsGenerator - {tool.name} returned {len(general_info)} characters")
-                            break
-                    except Exception as e:
-                        self.logger.warning(f"🔧 OpentronsGenerator - Failed to call {tool.name}: {e}")
-                        continue
-            
-            # Search for relevant documentation based on instructions
-            docs_to_search = []
-            instructions_lower = instructions.lower()
-            if "flex" in instructions_lower:
-                docs_to_search.append("flex-manual")
-            if "ot-2" in instructions_lower or "ot2" in instructions_lower:
-                docs_to_search.append("pd-manual")
-            if "protocol" in instructions_lower or "code" in instructions_lower or "opentrons" in instructions_lower:
-                docs_to_search.append("pd-manual")
-            
-            # If no specific category, search all
-            if not docs_to_search:
-                docs_to_search = ["pd-manual", "flex-manual"]
-            
-            self.logger.info(f"🔧 OpentronsGenerator - Searching documentation categories: {docs_to_search}")
+            if not search_tool and not api_ref_tool:
+                self.logger.warning("🔧 OpentronsGenerator - No Opentrons Python API documentation tools available")
+                return "No Opentrons Python API documentation tools available"
             
             relevant_docs = []
             
-            # Try to find list_documents and search_document tools
-            list_tool = None
-            search_tool = None
+            # Extract key terms from instructions for searching
+            instructions_lower = instructions.lower()
+            search_terms = []
             
-            for tool in tools:
-                if 'list_documents' in tool.name.lower():
-                    list_tool = tool
-                    self.logger.info(f"🔧 OpentronsGenerator - Found list_documents tool: {tool.name}")
-                elif 'search_document' in tool.name.lower():
-                    search_tool = tool
-                    self.logger.info(f"🔧 OpentronsGenerator - Found search_document tool: {tool.name}")
+            # Extract platform-specific terms
+            if "flex" in instructions_lower:
+                search_terms.append("flex")
+            if "ot-2" in instructions_lower or "ot2" in instructions_lower:
+                search_terms.append("ot-2")
             
-            self.logger.info(f"🔧 OpentronsGenerator - list_tool: {list_tool is not None}, search_tool: {search_tool is not None}")
+            # Extract operation terms
+            if "labware" in instructions_lower:
+                search_terms.append("labware")
+            if "pipette" in instructions_lower:
+                search_terms.append("pipette")
+            if "transfer" in instructions_lower:
+                search_terms.append("transfer")
+            if "aspirate" in instructions_lower or "dispense" in instructions_lower:
+                search_terms.append("aspirate dispense")
+            if "module" in instructions_lower:
+                search_terms.append("module")
+            if "deck" in instructions_lower or "slot" in instructions_lower:
+                search_terms.append("deck slot")
             
-            for category in docs_to_search:
-                self.logger.info(f"🔧 OpentronsGenerator - Processing category: {category}")
-                try:
-                    # List documents in category
-                    if list_tool:
-                        self.logger.info(f"🔧 OpentronsGenerator - Calling list_documents for category: {category}")
-                        doc_list = await list_tool.ainvoke({"category": category})
-                        if doc_list:
-                            relevant_docs.append(f"Category {category}: {str(doc_list)}")
-                            self.logger.info(f"🔧 OpentronsGenerator - list_documents returned {len(str(doc_list))} characters")
-                    
-                    # Search for specific documents
-                    if search_tool and doc_list:
-                        self.logger.info(f"🔧 OpentronsGenerator - Searching specific documents in category: {category}")
-                        try:
-                            # Parse the JSON response to get file names
-                            import json
-                            doc_data = json.loads(str(doc_list))
-                            files = doc_data.get("categories", [{}])[0].get("files", [])
-                            self.logger.info(f"🔧 OpentronsGenerator - Found {len(files)} files in category {category}")
-                            
-                            # Search for relevant files based on instructions
-                            relevant_files = []
-                            for file in files:
-                                if any(keyword in file.lower() for keyword in ["protocol", "api", "python", "script", "code"]):
-                                    relevant_files.append(file)
-                            
-                            self.logger.info(f"🔧 OpentronsGenerator - Found {len(relevant_files)} relevant files: {relevant_files[:3]}")
-                            
-                            # Search specific relevant files
-                            for filename in relevant_files[:3]:  # Limit to 3 most relevant files
-                                try:
-                                    self.logger.info(f"🔧 OpentronsGenerator - Searching document: {filename}")
-                                    search_result = await search_tool.ainvoke({
-                                        "filename": filename,
-                                        "category": category
-                                    })
-                                    if search_result:
-                                        relevant_docs.append(f"Document {filename}: {str(search_result)[:500]}...")
-                                        self.logger.info(f"🔧 OpentronsGenerator - {filename} returned {len(str(search_result))} characters")
-                                except Exception as e:
-                                    self.logger.warning(f"🔧 OpentronsGenerator - Failed to search document {filename}: {e}")
-                                    continue
-                        except Exception as e:
-                            self.logger.warning(f"🔧 OpentronsGenerator - Failed to parse document list for category {category}: {e}")
-                        
-                except Exception as e:
-                    self.logger.warning(f"Failed to get documentation for category {category}: {e}")
-                    continue
-            
-            # Combine all documentation
-            all_docs = []
-            if general_info:
-                all_docs.append(f"General Opentrons Info: {general_info}")
-            all_docs.extend(relevant_docs)
-            
-            if all_docs:
-                return "\n\n".join(all_docs)
+            # If no specific terms, use the instructions as search query
+            if not search_terms:
+                search_query = instructions
             else:
-                return "No specific Opentrons documentation found for this query"
+                search_query = " ".join(search_terms[:3])  # Use top 3 terms
+            
+            self.logger.info(f"🔧 OpentronsGenerator - Searching documentation with query: {search_query}")
+            
+            # Search for relevant documentation
+            try:
+                if search_tool:
+                    self.logger.info(f"🔧 OpentronsGenerator - Calling search_opentrons_docs with query: {search_query}")
+                    search_result = await search_tool.ainvoke({"query": search_query, "limit": 5})
+                    if search_result:
+                        relevant_docs.append(f"Search results: {str(search_result)}")
+                        self.logger.info(f"🔧 OpentronsGenerator - search_opentrons_docs returned {len(str(search_result))} characters")
+                
+                # Also try to get API reference for specific topics
+                if api_ref_tool and search_terms:
+                    for term in search_terms[:2]:  # Try top 2 terms
+                        try:
+                            self.logger.info(f"🔧 OpentronsGenerator - Getting API reference for: {term}")
+                            api_result = await api_ref_tool.ainvoke({"topic": term})
+                            if api_result:
+                                relevant_docs.append(f"API Reference for {term}: {str(api_result)}")
+                                self.logger.info(f"🔧 OpentronsGenerator - API reference returned {len(str(api_result))} characters")
+                                break  # Use first successful result
+                        except Exception as e:
+                            self.logger.debug(f"🔧 OpentronsGenerator - API reference search failed for {term}: {e}")
+                            continue
+                
+                # Get examples if available
+                if example_tool and ("transfer" in instructions_lower or "protocol" in instructions_lower):
+                    try:
+                        example_type = "transfer" if "transfer" in instructions_lower else "protocol"
+                        self.logger.info(f"🔧 OpentronsGenerator - Getting examples for: {example_type}")
+                        example_result = await example_tool.ainvoke({"example_type": example_type})
+                        if example_result:
+                            relevant_docs.append(f"Examples: {str(example_result)}")
+                            self.logger.info(f"🔧 OpentronsGenerator - Examples returned {len(str(example_result))} characters")
+                    except Exception as e:
+                        self.logger.debug(f"🔧 OpentronsGenerator - Example search failed: {e}")
+            
+            except Exception as e:
+                self.logger.warning(f"🔧 OpentronsGenerator - Documentation search failed: {e}")
+                # Continue with empty docs rather than failing completely
+                relevant_docs = []
+            
+            # Parse results if needed
+            try:
+                import json
+                parsed_docs = []
+                for doc in relevant_docs:
+                    try:
+                        # Try to parse JSON if it's a JSON string
+                        if doc.startswith("Search results:") or doc.startswith("API Reference") or doc.startswith("Examples:"):
+                            # Extract the JSON part
+                            json_part = doc.split(":", 1)[1].strip() if ":" in doc else doc
+                            try:
+                                doc_data = json.loads(json_part)
+                                # Format nicely
+                                if isinstance(doc_data, dict) and "results" in doc_data:
+                                    for result in doc_data.get("results", [])[:3]:  # Top 3 results
+                                        parsed_docs.append(f"{result.get('title', 'Unknown')}: {result.get('content', '')[:500]}")
+                                elif isinstance(doc_data, dict) and "examples" in doc_data:
+                                    for example in doc_data.get("examples", [])[:2]:  # Top 2 examples
+                                        parsed_docs.append(f"Example: {example.get('code', '')[:500]}")
+                                else:
+                                    parsed_docs.append(json_part[:1000])
+                            except json.JSONDecodeError:
+                                # Not JSON, use as-is
+                                parsed_docs.append(doc[:1000])
+                        else:
+                            parsed_docs.append(doc[:1000])
+                    except Exception as e:
+                        self.logger.debug(f"🔧 OpentronsGenerator - Failed to parse doc: {e}")
+                        parsed_docs.append(doc[:1000])
+                
+                if parsed_docs:
+                    relevant_docs = parsed_docs
+            except Exception as e:
+                self.logger.debug(f"🔧 OpentronsGenerator - Failed to parse documentation: {e}")
+                # Use original docs if parsing fails
+                pass
+            
+            # Fallback: if no docs found, try a simple search
+            if not relevant_docs and search_tool:
+                try:
+                    self.logger.info(f"🔧 OpentronsGenerator - Fallback: searching with full instructions")
+                    fallback_result = await search_tool.ainvoke({"query": instructions[:200], "limit": 3})
+                    if fallback_result:
+                        relevant_docs.append(str(fallback_result)[:2000])
+                except Exception as e:
+                    self.logger.debug(f"🔧 OpentronsGenerator - Fallback search failed: {e}")
+            
+            # If still no docs, return a message
+            if not relevant_docs:
+                self.logger.warning("🔧 OpentronsGenerator - No relevant documentation found")
+                return "Opentrons documentation search returned no results. Proceeding with general knowledge."
+            
+            # Combine all documentation into a single string
+            combined_docs = "\n\n".join(relevant_docs)
+            self.logger.info(f"🔧 OpentronsGenerator - Combined documentation length: {len(combined_docs)} characters")
+            
+            return combined_docs
             
         except Exception as e:
             self.logger.error(f"Failed to get Opentrons documentation: {e}")
             return "Opentrons documentation temporarily unavailable"
-    
-    def _create_protocol_from_instructions(self, instructions: str, docs: str, attempt: int) -> str:
-        """Create a protocol based on instructions and documentation"""
-        
-        # Extract core instruction for analysis
-        if "Previous attempt had the following issues:" in instructions:
-            # This is an improved instruction, extract the core
-            core_instruction = instructions.split('\n')[0]
-        else:
-            # This is the original instruction
-            core_instruction = instructions
-        
-        instructions_lower = core_instruction.lower()
-        
-        self.logger.info(f"🔧 OpentronsGenerator - Core instruction: {core_instruction[:100]}...")
-        self.logger.info(f"🔧 OpentronsGenerator - Instructions lower: {instructions_lower[:100]}...")
-        
-        # All protocols go through the same generation method
-        self.logger.info(f"🔧 OpentronsGenerator - Using Opentrons protocol generation")
-        return self._create_opentrons_protocol(core_instruction, attempt)
-    
-    def _create_opentrons_protocol(self, instructions: str, attempt: int) -> str:
-        """Create an Opentrons protocol based on instructions"""
-        return f"""
-from opentrons import protocol_api
-
-metadata = {{
-    'protocolName': 'Custom Protocol',
-    'author': 'Catalyze AI',
-    'description': 'Auto-generated Opentrons protocol',
-    'apiLevel': '2.13'
-}}
-
-def run(protocol: protocol_api.ProtocolContext):
-    # Load labware
-    tip_rack = protocol.load_labware('opentrons_96_tiprack_300ul', '1')
-    plate = protocol.load_labware('corning_96_wellplate_360ul_flat', '2')
-    reservoir = protocol.load_labware('nest_12_reservoir_15ml', '3')
-    
-    # Load pipette
-    pipette = protocol.load_instrument('p300_single', 'right', tip_racks=[tip_rack])
-    
-    # Add your specific protocol steps here
-    pipette.pick_up_tip()
-    # Example: Transfer 100µL from reservoir to plate
-    pipette.aspirate(100, reservoir['A1'])
-    pipette.dispense(100, plate['A1'])
-    pipette.drop_tip()
-    
-    protocol.comment('Protocol completed successfully')
-"""
-    
-    def _create_serial_dilution_protocol(self, instructions: str, attempt: int) -> str:
-        """Create a serial dilution protocol based on detailed instructions"""
-        return f"""
-from opentrons import protocol_api
-
-metadata = {{
-    'protocolName': 'Serial Dilution Assay',
-    'author': 'Test User',
-    'description': 'Automates a 2-fold serial dilution across the first row of a 96-well plate using buffer and reagent.',
-    'apiLevel': '2.13'
-}}
-
-def run(protocol: protocol_api.ProtocolContext):
-    # Load labware
-    plate = protocol.load_labware('corning_96_wellplate_360ul_flat', '1')
-    reservoir = protocol.load_labware('nest_12_reservoir_15ml', '2')
-    tiprack = protocol.load_labware('opentrons_96_tiprack_300ul', '3')
-    
-    # Load pipette
-    pipette = protocol.load_instrument('p300_single', 'right', tip_racks=[tiprack])
-    
-    # Add 100µL buffer from reservoir A1 into wells A1–A12
-    pipette.pick_up_tip()
-    for well in plate.rows()[0][:12]:  # A1-A12
-        pipette.aspirate(100, reservoir['A1'])
-        pipette.dispense(100, well)
-        pipette.blow_out()
-    pipette.drop_tip()
-    
-    # Add 100µL reagent from reservoir A2 into well A1
-    pipette.pick_up_tip()
-    pipette.aspirate(100, reservoir['A2'])
-    pipette.dispense(100, plate['A1'])
-    pipette.mix(3, 50, plate['A1'])  # Mix 3 times with 50µL
-    pipette.drop_tip()
-    
-    # Perform 2-fold serial dilution across wells A1–A12
-    for i in range(11):  # A1 to A11 (A12 is the last dilution)
-        pipette.pick_up_tip()
-        # Transfer 100µL from current well to next well
-        pipette.aspirate(100, plate.rows()[0][i])
-        pipette.dispense(100, plate.rows()[0][i+1])
-        # Mix 3 times with 50µL after each dilution
-        pipette.mix(3, 50, plate.rows()[0][i+1])
-        pipette.drop_tip()
-    
-    protocol.comment('Serial dilution protocol completed successfully')
-"""
-    
-    def _create_elisa_protocol(self, instructions: str, attempt: int) -> str:
-        """Create an ELISA protocol based on detailed instructions"""
-        return f"""
-from opentrons import protocol_api
-
-metadata = {{
-    'protocolName': 'ELISA Plate Preparation',
-    'author': 'Catalyze AI',
-    'description': 'Automates ELISA plate preparation with buffer and sample addition',
-    'apiLevel': '2.13'
-}}
-
-def run(protocol: protocol_api.ProtocolContext):
-    # Load labware
-    plate = protocol.load_labware('corning_96_wellplate_360ul_flat', '1')
-    reservoir = protocol.load_labware('nest_12_reservoir_15ml', '2')
-    tiprack = protocol.load_labware('opentrons_96_tiprack_300ul', '3')
-    
-    # Load pipette
-    pipette = protocol.load_instrument('p300_single', 'right', tip_racks=[tiprack])
-    
-    # Add 100µL buffer to all wells
-    pipette.pick_up_tip()
-    for well in plate.wells():
-        pipette.aspirate(100, reservoir['A1'])
-        pipette.dispense(100, well)
-        pipette.blow_out()
-    pipette.drop_tip()
-    
-    # Add 50µL sample to wells A1-A12
-    pipette.pick_up_tip()
-    for i in range(12):  # A1-A12
-        well_name = f'A{{i+1}}'
-        pipette.aspirate(50, reservoir['A2'])
-        pipette.dispense(50, plate[well_name])
-        pipette.blow_out()
-    pipette.drop_tip()
-    
-    protocol.comment('ELISA plate preparation completed successfully')
-"""
-    
-    def _create_transfer_protocol(self, instructions: str, attempt: int) -> str:
-        """Create a liquid transfer protocol"""
-        return f"""
-from opentrons import protocol_api
-
-metadata = {{
-    'protocolName': 'Liquid Transfer Protocol',
-    'author': 'Catalyze AI',
-    'description': 'Auto-generated liquid transfer protocol',
-    'apiLevel': '2.13'
-}}
-
-def run(protocol: protocol_api.ProtocolContext):
-    # Load labware
-    tip_rack = protocol.load_labware('opentrons_96_tiprack_300ul', '1')
-    source_plate = protocol.load_labware('corning_96_wellplate_360ul_flat', '2')
-    dest_plate = protocol.load_labware('corning_96_wellplate_360ul_flat', '3')
-    
-    # Load pipette
-    pipette = protocol.load_instrument('p300_single_gen2', 'right', tip_racks=[tip_rack])
-    
-    # Transfer liquid from A1 to B1
-    pipette.pick_up_tip()
-    pipette.aspirate(100, source_plate['A1'])
-    pipette.dispense(100, dest_plate['B1'])
-    pipette.drop_tip()
-    
-    # Additional transfers based on instructions
-    # Add more specific logic based on the instructions
-"""
-    
-    def _create_pcr_protocol(self, instructions: str, attempt: int) -> str:
-        """Create a PCR protocol"""
-        return f"""
-from opentrons import protocol_api
-
-metadata = {{
-    'protocolName': 'PCR Setup Protocol',
-    'author': 'Catalyze AI',
-    'description': 'Auto-generated PCR setup protocol',
-    'apiLevel': '2.13'
-}}
-
-def run(protocol: protocol_api.ProtocolContext):
-    # Load labware
-    tip_rack = protocol.load_labware('opentrons_96_tiprack_300ul', '1')
-    pcr_plate = protocol.load_labware('nest_96_wellplate_100ul_pcr_full_skirt', '2')
-    reagent_plate = protocol.load_labware('nest_12_reservoir_15ml', '3')
-    
-    # Load pipette
-    pipette = protocol.load_instrument('p300_single_gen2', 'right', tip_racks=[tip_rack])
-    
-    # PCR setup for 96-well plate
-    for row in range(8):  # 8 rows
-        for col in range(12):  # 12 columns
-            well_name = chr(65 + row) + str(col + 1)  # A1, A2, ..., H12
-            
-            # Pick up a new tip for each well
-            pipette.pick_up_tip()
-            
-            # Add master mix
-            pipette.transfer(20, reagent_plate['A1'], pcr_plate[well_name])
-            # Add template DNA
-            pipette.transfer(5, reagent_plate['A2'], pcr_plate[well_name])
-            # Add primers
-            pipette.transfer(2, reagent_plate['A3'], pcr_plate[well_name])
-            
-            # Mix the reaction
-            pipette.mix(3, 30, pcr_plate[well_name])
-            
-            # Drop the tip after each well
-            pipette.drop_tip()
-"""
-    
-    def _create_dilution_protocol(self, instructions: str, attempt: int) -> str:
-        """Create a dilution protocol"""
-        return f"""
-from opentrons import protocol_api
-
-metadata = {{
-    'protocolName': 'Dilution Protocol',
-    'author': 'Catalyze AI',
-    'description': 'Auto-generated dilution protocol',
-    'apiLevel': '2.13'
-}}
-
-def run(protocol: protocol_api.ProtocolContext):
-    # Load labware
-    tip_rack = protocol.load_labware('opentrons_96_tiprack_300ul', '1')
-    source_plate = protocol.load_labware('corning_96_wellplate_360ul_flat', '2')
-    dest_plate = protocol.load_labware('corning_96_wellplate_360ul_flat', '3')
-    diluent_plate = protocol.load_labware('nest_12_reservoir_15ml', '4')
-    
-    # Load pipette
-    pipette = protocol.load_instrument('p300_single_gen2', 'right', tip_racks=[tip_rack])
-    
-    # Perform dilutions
-    for i in range(8):  # 8 dilutions
-        pipette.pick_up_tip()
-        # Transfer sample
-        pipette.transfer(10, source_plate[f'A{{i+1}}'], dest_plate[f'A{{i+1}}'])
-        # Add diluent
-        pipette.transfer(90, diluent_plate['A1'], dest_plate[f'A{{i+1}}'])
-        # Mix
-        pipette.mix(3, 50, dest_plate[f'A{{i+1}}'])
-        pipette.drop_tip()
-"""
-    
-    def _create_general_protocol(self, instructions: str, attempt: int) -> str:
-        """Create a general protocol"""
-        return f"""
-from opentrons import protocol_api
-
-metadata = {{
-    'protocolName': 'Custom Protocol',
-    'author': 'Catalyze AI',
-    'description': 'Auto-generated protocol based on instructions',
-    'apiLevel': '2.13'
-}}
-
-def run(protocol: protocol_api.ProtocolContext):
-    # Load labware
-    tip_rack = protocol.load_labware('opentrons_96_tiprack_300ul', '1')
-    plate = protocol.load_labware('corning_96_wellplate_360ul_flat', '2')
-    
-    # Load pipette
-    pipette = protocol.load_instrument('p300_single_gen2', 'right', tip_racks=[tip_rack])
-    
-    # Protocol implementation based on: {instructions}
-    # Add specific steps based on the instructions
-    pipette.pick_up_tip()
-    # Add your protocol steps here
-    pipette.drop_tip()
-"""
     
     def _improve_instructions(
         self, 

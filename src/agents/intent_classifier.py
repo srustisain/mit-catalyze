@@ -10,13 +10,11 @@ Classifies user queries into one of four categories:
 
 import asyncio
 import logging
-from typing import Dict, List, Optional, Tuple, Any
+from typing import Dict, List, Optional, Any
 from dataclasses import dataclass
 from enum import Enum
 import re
-import json
 
-from src.clients.llm_client import LLMClient
 from src.config.logging_config import get_logger
 
 
@@ -32,102 +30,56 @@ class IntentType(Enum):
 class ClassificationResult:
     """Result of intent classification"""
     intent: IntentType
-    confidence: float
+    confidence: float  # 1.0 if matched, 0.0 if not matched
     entities: List[str]
     reasoning: str
-    secondary_intents: List[Tuple[IntentType, float]] = None
 
 
 class IntentClassifier:
-    """Classifies user queries into appropriate intent categories"""
+    """Classifies user queries into appropriate intent categories using simple priority-based matching"""
     
-    def __init__(self, llm_client: LLMClient = None):
-        self.llm_client = llm_client or LLMClient()
+    def __init__(self, llm_client=None):
+        # llm_client parameter kept for backward compatibility but not used
         self.logger = get_logger("catalyze.intent_classifier")
         
-        # Define keywords and patterns for each intent
-        self.intent_patterns = {
-            IntentType.RESEARCH: {
-                "keywords": [
-                    "what is", "explain", "how does", "tell me about", "describe",
-                    "molecular weight", "formula", "structure", "properties",
-                    "mechanism", "reaction", "compound", "chemical", "molecule",
-                    "find", "search", "lookup", "information", "data"
-                ],
-                "patterns": [
-                    r"what is the (molecular weight|formula|structure) of",
-                    r"explain the (mechanism|process|reaction) of",
-                    r"tell me about (.*) (compound|chemical|molecule)",
-                    r"how does (.*) work",
-                    r"find (similar|related) (compounds|chemicals)"
-                ]
-            },
-            IntentType.PROTOCOL: {
-                "keywords": [
-                    "protocol", "procedure", "steps", "method", "synthesis",
-                    "extract", "purify", "isolate", "prepare", "make",
-                    "step by step", "how to", "procedure for", "method for",
-                    "synthesize", "create", "generate", "produce"
-                ],
-                "patterns": [
-                    r"how to (synthesize|extract|purify|isolate)",
-                    r"protocol for (.*)",
-                    r"step by step (procedure|method)",
-                    r"create a (protocol|procedure) for",
-                    r"generate a (method|protocol)"
-                ]
-            },
-            IntentType.AUTOMATE: {
-                "keywords": [
-                    "opentrons", "ot-2", "ot2", "flex", "pipette",
-                    "liquid handling", "automation", "robot", "robotic",
-                    "automate", "script", "code", "program", "pyhamilton",
-                    "96-well", "plate", "transfer", "dispense", "aspirate",
-                    "api v2", "api v1", "python code", "write code",
-                    "generate code", "create code", "write script", "make script",
-                    "generate script", "create script", "automation code"
-                ],
-                "patterns": [
-                    r"write opentrons.*code",
-                    r"opentrons.*api.*code",
-                    r"generate.*opentrons.*code",
-                    r"create.*opentrons.*script",
-                    r"opentrons (protocol|script|code)",
-                    r"generate (opentrons|ot-2|flex) (protocol|script)",
-                    r"automate (.*) (process|procedure)",
-                    r"create (.*) (script|code|program)",
-                    r"liquid handling (protocol|script)",
-                    r"generate (code|script)",
-                    r"create (code|script)",
-                    r"write (code|script)",
-                    r"make (code|script)",
-                    r"(code|script) for"
-                ]
-            },
-            IntentType.SAFETY: {
-                "keywords": [
-                    "safety", "hazard", "dangerous", "toxic", "corrosive",
-                    "ppe", "gloves", "goggles", "lab coat", "fume hood",
-                    "sds", "safety data sheet", "risk", "precaution",
-                    "incompatible", "reactive", "flammable", "explosive"
-                ],
-                "patterns": [
-                    r"is (.*) (safe|dangerous|toxic)",
-                    r"safety (precautions|measures) for",
-                    r"what (ppe|safety equipment) for",
-                    r"hazard (assessment|analysis) of",
-                    r"safety data sheet for"
-                ]
-            }
-        }
+        # Define explicit keywords for each intent (priority order: automate > protocol > safety > research)
+        # Only the most explicit keywords that clearly indicate intent
+        self.automate_keywords = [
+            "generate code", "write code", "create code", "make code",
+            "generate script", "write script", "create script", "make script",
+            "opentrons code", "opentrons script", "opentrons protocol",
+            "generate opentrons", "create opentrons", "write opentrons",
+            "lynx code", "lynx script",
+            "automation code", "automation script",
+            "python code", "c# code", "csharp code",
+            "code for", "script for"  # "code for this protocol" pattern
+        ]
+        
+        self.protocol_keywords = [
+            "create protocol", "generate protocol", "write protocol",
+            "create procedure", "generate procedure", "write procedure",
+            "laboratory protocol", "lab protocol", "experimental protocol",
+            "synthesis protocol", "extraction protocol",
+            "step by step protocol", "step-by-step protocol",
+            "complete protocol", "detailed protocol"
+        ]
+        
+        self.safety_keywords = [
+            "safety analysis", "safety assessment", "safety data",
+            "hazard analysis", "hazard assessment",
+            "is safe", "is dangerous", "is toxic",
+            "safety precautions", "safety measures",
+            "ppe for", "safety equipment"
+        ]
     
     async def classify(self, query: str, context: Dict[str, Any] = None) -> ClassificationResult:
         """
-        Classify a user query into intent categories
+        Classify a user query into intent categories using simple priority-based matching.
+        Defaults to RESEARCH if no explicit intent is found.
         
         Args:
             query: User's query string
-            context: Additional context (conversation history, etc.)
+            context: Additional context (conversation history, etc.) - not used in simple classification
             
         Returns:
             ClassificationResult with intent, confidence, and reasoning
@@ -141,209 +93,112 @@ class IntentClassifier:
                 intent=IntentType.UNKNOWN,
                 confidence=1.0,
                 reasoning="Query is not chemistry or lab-related",
-                entities=[],
-                secondary_intents=[]
+                entities=[]
             )
         
-        # Step 1: Rule-based classification
-        rule_result = self._rule_based_classification(query)
+        # Step 1: Simple priority-based classification
+        result = self._simple_classify(query)
         
-        # Step 2: LLM-based classification for complex cases
-        if rule_result.confidence < 0.7:
-            llm_result = await self._llm_based_classification(query, context)
-            # Combine results
-            final_result = self._combine_classifications(rule_result, llm_result)
-        else:
-            final_result = rule_result
-        
-        # Step 3: Extract entities
+        # Step 2: Extract entities
         entities = self._extract_entities(query)
-        final_result.entities = entities
+        result.entities = entities
         
-        self.logger.info(f"Classification result: {final_result.intent.value} (confidence: {final_result.confidence:.2f})")
-        return final_result
+        self.logger.info(f"Classification result: {result.intent.value} (confidence: {result.confidence:.2f})")
+        return result
     
-    def _rule_based_classification(self, query: str) -> ClassificationResult:
-        """Rule-based classification using keywords and patterns"""
+    def _simple_classify(self, query: str) -> ClassificationResult:
+        """
+        Simple priority-based classification.
+        Checks for explicit keywords in priority order: automate > protocol > safety > research (default)
+        Uses flexible matching that allows words between keyword parts.
+        """
         query_lower = query.lower()
         
-        intent_scores = {}
+        # Log all keywords being checked for debugging
+        self.logger.debug(f"INTENT CLASSIFIER: Checking query '{query[:100]}' against {len(self.automate_keywords)} automation, {len(self.protocol_keywords)} protocol, {len(self.safety_keywords)} safety keywords")
         
-        for intent_type, patterns in self.intent_patterns.items():
-            score = 0.0
-            
-            # Check regex patterns first (highest priority)
-            for pattern in patterns["patterns"]:
-                if re.search(pattern, query_lower):
-                    score += 5.0  # Patterns are most specific
-            
-            # Check high-priority keywords for automation
-            if intent_type == IntentType.AUTOMATE:
-                high_priority_keywords = ["write code", "generate code", "create code", "api v2", "api v1", "python code", "opentrons", "ot-2", "ot2", "automation code"]
-                for keyword in high_priority_keywords:
-                    if keyword in query_lower:
-                        score += 3.0
-                
-                # Check other keywords
-                for keyword in patterns["keywords"]:
-                    if keyword not in high_priority_keywords and keyword in query_lower:
-                        score += 1.0
+        # Priority 1: Check for explicit automation keywords
+        matched_automate = []
+        for keyword in self.automate_keywords:
+            # Try exact match first
+            if keyword in query_lower:
+                matched_automate.append(keyword)
             else:
-                # Check keywords for other intents
-                for keyword in patterns["keywords"]:
-                    if keyword in query_lower:
-                        score += 1.0
-            
-            intent_scores[intent_type] = score
+                # Flexible matching: check if all words in keyword appear in order
+                keyword_words = keyword.split()
+                if len(keyword_words) > 1:
+                    # For multi-word keywords, check if all words appear in order (allowing words in between)
+                    pattern = r'\b' + r'\b.*\b'.join(re.escape(word) for word in keyword_words) + r'\b'
+                    if re.search(pattern, query_lower):
+                        matched_automate.append(keyword)
         
-        # Find the best match
-        if not intent_scores or max(intent_scores.values()) == 0:
+        if matched_automate:
+            self.logger.info(f"INTENT CLASSIFIER: Matched AUTOMATE keywords {matched_automate} in query: {query[:100]}")
             return ClassificationResult(
-                intent=IntentType.UNKNOWN,
-                confidence=0.0,
+                intent=IntentType.AUTOMATE,
+                confidence=1.0,
                 entities=[],
-                reasoning="No matching patterns found"
+                reasoning=f"Explicit automation keyword matched: {matched_automate[0]}"
             )
         
-        best_intent = max(intent_scores, key=intent_scores.get)
-        max_score = intent_scores[best_intent]
+        # Priority 2: Check for explicit protocol keywords
+        matched_protocol = []
+        for keyword in self.protocol_keywords:
+            # Try exact match first
+            if keyword in query_lower:
+                matched_protocol.append(keyword)
+            else:
+                # Flexible matching: check if all words in keyword appear in order
+                keyword_words = keyword.split()
+                if len(keyword_words) > 1:
+                    # For multi-word keywords, check if all words appear in order (allowing words in between)
+                    pattern = r'\b' + r'\b.*\b'.join(re.escape(word) for word in keyword_words) + r'\b'
+                    if re.search(pattern, query_lower):
+                        matched_protocol.append(keyword)
         
-        # Calculate confidence (normalize by query length and pattern complexity)
-        confidence = min(max_score / (len(query.split()) * 0.5), 1.0)
+        if matched_protocol:
+            self.logger.info(f"INTENT CLASSIFIER: Matched PROTOCOL keywords {matched_protocol} in query: {query[:100]}")
+            return ClassificationResult(
+                intent=IntentType.PROTOCOL,
+                confidence=1.0,
+                entities=[],
+                reasoning=f"Explicit protocol keyword matched: {matched_protocol[0]}"
+            )
         
-        # Get secondary intents
-        sorted_intents = sorted(intent_scores.items(), key=lambda x: x[1], reverse=True)
-        secondary_intents = [(intent, score / max_score) for intent, score in sorted_intents[1:3] if score > 0]
+        # Priority 3: Check for explicit safety keywords
+        matched_safety = []
+        for keyword in self.safety_keywords:
+            # Try exact match first
+            if keyword in query_lower:
+                matched_safety.append(keyword)
+            else:
+                # Flexible matching: check if all words in keyword appear in order
+                keyword_words = keyword.split()
+                if len(keyword_words) > 1:
+                    # For multi-word keywords, check if all words appear in order (allowing words in between)
+                    pattern = r'\b' + r'\b.*\b'.join(re.escape(word) for word in keyword_words) + r'\b'
+                    if re.search(pattern, query_lower):
+                        matched_safety.append(keyword)
         
+        if matched_safety:
+            self.logger.info(f"INTENT CLASSIFIER: Matched SAFETY keywords {matched_safety} in query: {query[:100]}")
+            return ClassificationResult(
+                intent=IntentType.SAFETY,
+                confidence=1.0,
+                entities=[],
+                reasoning=f"Explicit safety keyword matched: {matched_safety[0]}"
+            )
+        
+        # Priority 4: Default to RESEARCH (most chemistry queries are research)
+        total_keywords = len(self.automate_keywords) + len(self.protocol_keywords) + len(self.safety_keywords)
+        self.logger.info(f"INTENT CLASSIFIER: No explicit intent matched for query '{query[:100]}' (checked {total_keywords} keywords), defaulting to RESEARCH")
         return ClassificationResult(
-            intent=best_intent,
-            confidence=confidence,
+            intent=IntentType.RESEARCH,
+            confidence=1.0,
             entities=[],
-            reasoning=f"Rule-based classification: {best_intent.value} (score: {max_score})",
-            secondary_intents=secondary_intents
+            reasoning="Default to research (no explicit intent keywords found)"
         )
     
-    async def _llm_based_classification(self, query: str, context: Dict[str, Any] = None) -> ClassificationResult:
-        """LLM-based classification for complex queries"""
-        try:
-            # Create classification prompt
-            prompt = self._create_classification_prompt(query, context)
-            
-            # Get LLM response
-            response = await self._get_llm_response(prompt)
-            
-            # Parse LLM response
-            return self._parse_llm_classification(response, query)
-            
-        except Exception as e:
-            self.logger.error(f"LLM classification failed: {e}")
-            return ClassificationResult(
-                intent=IntentType.UNKNOWN,
-                confidence=0.0,
-                entities=[],
-                reasoning=f"LLM classification failed: {str(e)}"
-            )
-    
-    def _create_classification_prompt(self, query: str, context: Dict[str, Any] = None) -> str:
-        """Create a prompt for LLM-based classification"""
-        context_str = ""
-        if context and context.get("conversation_history"):
-            context_str = f"\nConversation context: {context['conversation_history'][-3:]}"
-        
-        prompt = f"""
-Classify this chemistry/lab query into one of these categories:
-
-1. RESEARCH: Chemical properties, mechanisms, explanations, compound lookups
-2. PROTOCOL: Lab procedures, synthesis methods, experimental protocols  
-3. AUTOMATE: Lab automation scripts, Opentrons protocols, robotic systems
-4. SAFETY: Safety questions, hazard assessments, PPE recommendations
-5. UNKNOWN: Non-chemistry or non-lab related queries
-
-Query: "{query}"
-{context_str}
-
-Respond with JSON:
-{{
-    "intent": "research|protocol|automate|safety|unknown",
-    "confidence": 0.0-1.0,
-    "reasoning": "Brief explanation",
-    "entities": ["extracted", "entities"]
-}}
-"""
-        return prompt
-    
-    async def _get_llm_response(self, prompt: str) -> str:
-        """Get response from LLM"""
-        try:
-            response = self.llm_client.generate_response(
-                prompt=prompt,
-                system_message="You are an expert at classifying chemistry and lab-related queries. Always respond with valid JSON."
-            )
-            return response
-        except Exception as e:
-            self.logger.error(f"LLM response failed: {e}")
-            return '{"intent": "unknown", "confidence": 0.0, "reasoning": "LLM error", "entities": []}'
-    
-    def _parse_llm_classification(self, response: str, query: str) -> ClassificationResult:
-        """Parse LLM classification response"""
-        try:
-            # Extract JSON from response
-            json_match = re.search(r'\{.*\}', response, re.DOTALL)
-            if json_match:
-                data = json.loads(json_match.group())
-                
-                intent_str = data.get("intent", "unknown").lower()
-                intent_map = {
-                    "research": IntentType.RESEARCH,
-                    "protocol": IntentType.PROTOCOL,
-                    "automate": IntentType.AUTOMATE,
-                    "safety": IntentType.SAFETY
-                }
-                intent = intent_map.get(intent_str, IntentType.UNKNOWN)
-                
-                return ClassificationResult(
-                    intent=intent,
-                    confidence=float(data.get("confidence", 0.0)),
-                    entities=data.get("entities", []),
-                    reasoning=data.get("reasoning", "LLM classification")
-                )
-            else:
-                raise ValueError("No JSON found in response")
-                
-        except Exception as e:
-            self.logger.error(f"Failed to parse LLM response: {e}")
-            return ClassificationResult(
-                intent=IntentType.UNKNOWN,
-                confidence=0.0,
-                entities=[],
-                reasoning=f"Failed to parse LLM response: {str(e)}"
-            )
-    
-    def _combine_classifications(self, rule_result: ClassificationResult, llm_result: ClassificationResult) -> ClassificationResult:
-        """Combine rule-based and LLM-based classifications"""
-        # Weight the results (rule-based gets higher weight for high confidence)
-        if rule_result.confidence > 0.8:
-            weight_rule = 0.7
-            weight_llm = 0.3
-        else:
-            weight_rule = 0.4
-            weight_llm = 0.6
-        
-        # If both agree, use higher confidence
-        if rule_result.intent == llm_result.intent:
-            combined_confidence = max(rule_result.confidence, llm_result.confidence)
-            return ClassificationResult(
-                intent=rule_result.intent,
-                confidence=combined_confidence,
-                entities=llm_result.entities or rule_result.entities,
-                reasoning=f"Combined: {rule_result.reasoning} + {llm_result.reasoning}"
-            )
-        
-        # If they disagree, use the one with higher confidence
-        if rule_result.confidence > llm_result.confidence:
-            return rule_result
-        else:
-            return llm_result
     
     def _extract_entities(self, query: str) -> List[str]:
         """Extract relevant entities from the query"""

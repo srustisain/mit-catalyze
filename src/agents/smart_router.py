@@ -38,7 +38,7 @@ class SmartRouter:
         self.logger = get_logger("catalyze.smart_router")
         
         # Initialize components
-        self.intent_classifier = IntentClassifier(llm_client)
+        self.intent_classifier = IntentClassifier()  # No LLM needed for simple classification
         # Create agent instances once - they'll be initialized on first use or at startup
         self.specialized_agents = {
             IntentType.RESEARCH: ResearchAgent(),
@@ -63,10 +63,11 @@ class SmartRouter:
         
         try:
             # Step 1: Classify the query
+            self.logger.info(f"ROUTER: Starting classification for query: {query[:100]}")
             classification = await self.intent_classifier.classify(query, context)
-            self.logger.info(f"Classified as: {classification.intent.value} (confidence: {classification.confidence:.2f})")
+            self.logger.info(f"ROUTER: Classification result - intent: {classification.intent.value}, confidence: {classification.confidence:.2f}, reasoning: {classification.reasoning}")
             
-            # Step 1.5: Check if query was rejected by guardrails
+            # Step 2: Check if query was rejected by guardrails
             if classification.intent == IntentType.UNKNOWN and classification.reasoning == "Query is not chemistry or lab-related":
                 return {
                     "success": False,
@@ -75,18 +76,8 @@ class SmartRouter:
                     "error": "Query rejected by content guardrails"
                 }
             
-            # Step 2: Route to appropriate agent
-            if classification.confidence < 0.3:
-                return {
-                    "success": False,
-                    "response": "I'm not sure how to help with that. Could you please rephrase your question or provide more details?",
-                    "classification": classification,
-                    "error": f"Low confidence classification: {classification.confidence:.2f}"
-                }
-            
-            # Step 3: Execute the appropriate agent
+            # Step 3: Handle unknown intents
             if classification.intent == IntentType.UNKNOWN:
-                # Handle unknown intents with a helpful default response
                 return {
                     "success": True,
                     "response": "Sorry, I can help you with chemistry and lab-related questions! I can assist with:\n\n• **Research questions** - Chemical compounds, reactions, properties\n• **Protocol generation** - Lab procedures and experimental methods\n• **Lab automation** - Opentrons protocols and automation scripts\n• **Safety analysis** - Chemical hazards and safety procedures\n\nPlease ask me something related to chemistry or laboratory work!",
@@ -98,11 +89,30 @@ class SmartRouter:
                     }
                 }
             
+            # Step 4: Defensive check - validate classification makes sense
+            if classification.intent == IntentType.AUTOMATE:
+                # Double-check that query actually has automation keywords
+                query_lower = query.lower()
+                automation_keywords = [
+                    "generate code", "write code", "create code", "opentrons code", "opentrons script",
+                    "automation code", "python code", "write script", "generate script"
+                ]
+                has_automation = any(kw in query_lower for kw in automation_keywords)
+                if not has_automation:
+                    self.logger.warning(f"ROUTER: Classification says AUTOMATE but query has no automation keywords. Query: {query[:100]}")
+                    # Override to RESEARCH
+                    classification.intent = IntentType.RESEARCH
+                    classification.reasoning = "Overridden to RESEARCH - no automation keywords found"
+                    self.logger.info(f"ROUTER: Overriding classification to RESEARCH")
+            
+            # Step 5: Execute the appropriate agent (confidence is always 1.0 for matched intents)
+            self.logger.info(f"ROUTER: Executing agent: {classification.intent.value}")
             agent_response = await self._execute_agent(classification.intent, query, context)
             
-            # Step 4: Format the response
+            # Step 6: Format the response
             final_response = self._format_response(agent_response, classification)
             
+            self.logger.info(f"ROUTER: Successfully processed query with {classification.intent.value} agent")
             return {
                 "success": True,
                 "response": final_response,
@@ -177,10 +187,7 @@ class SmartRouter:
             else:
                 content = str(agent_response)
             
-            # Add classification context if confidence is low
-            if classification.confidence < 0.8:
-                context = f"\n\n*Note: I classified this as a {classification.intent.value} question. If this isn't what you were looking for, please let me know!*"
-                content += context
+            # No need for confidence-based context since confidence is always 1.0 for matched intents
             
             return content
             

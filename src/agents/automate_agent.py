@@ -29,9 +29,10 @@ class AutomateAgent(BaseAgent):
             name="AutomateAgent",
             description="Specialized in creating lab automation scripts for robotic systems",
             tools=[
-                "fetch_general",
-                "list_documents",
-                "search_document"
+                "search_opentrons_docs",
+                "get_opentrons_api_reference",
+                "get_opentrons_example",
+                "update_opentrons_docs"
             ]
         )
         
@@ -201,7 +202,7 @@ Your original request: {query[:200]}{'...' if len(query) > 200 else ''}
     async def _process_general_automation_request(self, query: str, context: Dict[str, Any] = None) -> Dict[str, Any]:
         """Handle general automation requests that don't require code generation"""
         
-        # For now, provide general automation advice
+        # Provide general automation advice
         response = f"""
 🔧 **Automation Assistant**
 
@@ -257,6 +258,9 @@ The script is ready to use with your Lynx system. Make sure to adjust the plate 
         # Ensure Opentrons generator is initialized for validation
         await self._ensure_opentrons_generator()
         
+        # Detect platform (OT-2 or Flex)
+        platform = self._detect_opentrons_platform(query, context)
+        
         # Extract protocol instructions from query and context
         instructions = self._extract_protocol_instructions(query, context)
         
@@ -267,17 +271,42 @@ The script is ready to use with your Lynx system. Make sure to adjust the plate 
         conversation_context = self._format_conversation_context(context)
         
         self.logger.info(f"Processing Opentrons request with LangGraph agent: {instructions[:100]}...")
-        self.logger.info(f"Context: Equipment={equipment_details}, Volumes={volume_details}, Labware={labware_details}")
+        self.logger.info(f"Platform: {platform.upper()}, Equipment={equipment_details}, Volumes={volume_details}, Labware={labware_details}")
         
         # Use LangGraph agent to generate code (with MCP tools) - reduced retries for speed
         max_retries = 2  # Reduced from 3 to 2 for faster generation
         for attempt in range(max_retries):
             try:
+                # Create platform-specific deck slot information
+                if platform == "ot2":
+                    deck_slots_info = """
+DECK SLOTS (OT-2): Use numeric slots '1' through '11' ONLY
+- Valid slots: '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11'
+- Slot '12' is reserved for trash (do not use in load_labware calls)
+- Example: protocol.load_labware('opentrons_96_tiprack_300ul', '1')
+- Example: protocol.load_instrument('p300_single_gen2', 'right', tip_racks=[tip_rack])
+- NEVER use letter-based slots like 'A1', 'B1', etc. - these are for Flex only!
+"""
+                else:  # flex
+                    deck_slots_info = """
+DECK SLOTS (Flex): Use coordinate slots 'A1' through 'D3' ONLY
+- Valid slots: 'A1', 'A2', 'A3', 'B1', 'B2', 'B3', 'C1', 'C2', 'C3', 'D1', 'D2', 'D3'
+- 4 rows (A-D) × 3 columns (1-3) = 12 slots total
+- Example: protocol.load_labware('opentrons_flex_96_tiprack_200ul', 'A1')
+- Example: protocol.load_instrument('flex_1channel_1000', 'left', tip_racks=[tip_rack])
+- NEVER use numeric slots like '1', '2', etc. - these are for OT-2 only!
+- NEVER use rows beyond D (like 'E1', 'F1') - only A, B, C, D exist!
+"""
+                
                 # Create context-aware prompt for Opentrons code generation
                 generation_prompt = f"""
 Generate a complete Opentrons Python protocol for the following instructions:
 
 {instructions}
+
+TARGET PLATFORM: Opentrons {platform.upper()}
+
+{deck_slots_info}
 
 SPECIFIC REQUIREMENTS FROM CONTEXT:
 - Equipment: {equipment_details}
@@ -325,7 +354,10 @@ Requirements:
 7. Include error handling and validation
 8. Make the code ready for simulation and execution
 
-IMPORTANT:
+CRITICAL - DECK SLOT NAMING:
+- For {platform.upper()}: {('Use ONLY numeric slots 1-11' if platform == 'ot2' else 'Use ONLY coordinate slots A1-D3')}
+- Double-check every load_labware() call uses correct slot format
+- Invalid slots will cause KeyError during validation
 - Use exact details from the conversation (volumes, concentrations, equipment)
 - Query Opentrons documentation for correct labware names using available tools
 - Generate ONLY Python code, starting with imports
@@ -348,8 +380,8 @@ IMPORTANT:
                         
                         self.logger.info(f"LangGraph agent generated code (attempt {attempt + 1})")
                         
-                        # Validate the generated code
-                        validation_result = await self.opentrons_validator.validate_code(generated_code)
+                        # Validate the generated code with platform info
+                        validation_result = await self.opentrons_validator.validate_code(generated_code, platform=platform)
                         
                         if validation_result.success:
                             # Success! Return the validated code
@@ -379,16 +411,41 @@ IMPORTANT:
                                 error_summary = "\n".join([f"- {err}" for err in validation_result.errors])
                                 suggestions_summary = "\n".join([f"- {sug}" for sug in validation_result.suggestions])
                                 
+                                # Check for slot-related errors and add specific guidance
+                                slot_guidance = ""
+                                for error in validation_result.errors:
+                                    if "KeyError" in error or "slot" in error.lower():
+                                        if platform == "ot2":
+                                            slot_guidance = """
+CRITICAL DECK SLOT ERROR DETECTED:
+- You MUST use numeric slots: '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11'
+- NEVER use letter-based slots like 'A1', 'B1', 'E1', etc.
+- Example: protocol.load_labware('labware_name', '1')  # Correct for OT-2
+- Example: protocol.load_labware('labware_name', 'A1')  # WRONG for OT-2
+"""
+                                        else:  # flex
+                                            slot_guidance = """
+CRITICAL DECK SLOT ERROR DETECTED:
+- You MUST use coordinate slots: 'A1', 'A2', 'A3', 'B1', 'B2', 'B3', 'C1', 'C2', 'C3', 'D1', 'D2', 'D3'
+- NEVER use numeric slots like '1', '2', '3', etc.
+- NEVER use rows beyond D (like 'E1', 'F1', 'G1') - only A, B, C, D exist!
+- Example: protocol.load_labware('labware_name', 'A1')  # Correct for Flex
+- Example: protocol.load_labware('labware_name', '1')   # WRONG for Flex
+- Example: protocol.load_labware('labware_name', 'E1')  # WRONG - no row E!
+"""
+                                        break
+                                
                                 instructions = f"""
 {instructions}
 
 PREVIOUS ATTEMPT HAD ERRORS:
 {error_summary}
+{slot_guidance}
 
 SUGGESTIONS FOR IMPROVEMENT:
 {suggestions_summary}
 
-Please generate the code again with these issues fixed.
+Please generate the code again with these issues fixed. Pay special attention to deck slot naming!
 """
                                 continue
                             else:
@@ -414,12 +471,12 @@ Suggestions:
                         # Agent failed, try next attempt
                         self.logger.warning(f"Agent failed (attempt {attempt + 1}): {agent_result.get('error')}")
                         if attempt >= max_retries - 1:
-                            return await self._fallback_opentrons_generation(instructions, context)
+                            return await self._fallback_opentrons_generation(instructions, context, platform)
                         continue
                 else:
                     # No LangGraph agent available, use fallback
                     self.logger.warning("LangGraph agent not available, using fallback")
-                    return await self._fallback_opentrons_generation(instructions, context)
+                    return await self._fallback_opentrons_generation(instructions, context, platform)
                     
             except Exception as e:
                 self.logger.error(f"Opentrons generation attempt {attempt + 1} failed: {e}")
@@ -434,16 +491,17 @@ Suggestions:
                     }
         
         # Should not reach here
-        return await self._fallback_opentrons_generation(instructions, context)
+        return await self._fallback_opentrons_generation(instructions, context, platform)
     
-    async def _fallback_opentrons_generation(self, instructions: str, context: Dict[str, Any] = None) -> Dict[str, Any]:
+    async def _fallback_opentrons_generation(self, instructions: str, context: Dict[str, Any] = None, platform: str = "ot2") -> Dict[str, Any]:
         """Fallback to template-based generation when LangGraph agent fails"""
-        self.logger.info("Using fallback template-based Opentrons generation")
+        self.logger.info(f"Using fallback template-based Opentrons generation for {platform.upper()}")
         
         # Use the original OpentronsCodeGenerator as fallback
         generation_result = await self.opentrons_generator.generate_with_validation(
             instructions=instructions,
             context=context,
+            platform=platform,
             max_retries=2
         )
         
@@ -564,6 +622,47 @@ Make the code production-ready and well-documented.
                     instructions += f"\n\nConversation context: {context_text}"
         
         return instructions
+    
+    def _detect_opentrons_platform(self, query: str, context: Dict[str, Any] = None) -> str:
+        """
+        Detect which Opentrons platform to target (OT-2 or Flex)
+        
+        Returns:
+            'ot2' or 'flex' - defaults to 'ot2' if not specified
+        """
+        # Check query first
+        query_lower = query.lower()
+        
+        # Explicit Flex keywords
+        flex_keywords = ["flex", "opentrons flex", "opentrons-flex"]
+        if any(keyword in query_lower for keyword in flex_keywords):
+            self.logger.info("Detected Opentrons Flex platform from query")
+            return "flex"
+        
+        # Explicit OT-2 keywords
+        ot2_keywords = ["ot-2", "ot2", "ot 2", "opentrons 2", "opentrons ot-2", "opentrons ot2"]
+        if any(keyword in query_lower for keyword in ot2_keywords):
+            self.logger.info("Detected Opentrons OT-2 platform from query")
+            return "ot2"
+        
+        # Check conversation history
+        if context and context.get("conversation_history"):
+            for msg in context["conversation_history"][-5:]:  # Check last 5 messages
+                content = msg.get("content", "").lower()
+                
+                # Check for Flex
+                if any(keyword in content for keyword in flex_keywords):
+                    self.logger.info("Detected Opentrons Flex platform from conversation history")
+                    return "flex"
+                
+                # Check for OT-2
+                if any(keyword in content for keyword in ot2_keywords):
+                    self.logger.info("Detected Opentrons OT-2 platform from conversation history")
+                    return "ot2"
+        
+        # Default to OT-2 (more common, simpler slot naming)
+        self.logger.info("No platform specified, defaulting to Opentrons OT-2")
+        return "ot2"
     
     def _extract_equipment_details(self, context: Dict[str, Any]) -> str:
         """Extract equipment specifications from conversation context"""

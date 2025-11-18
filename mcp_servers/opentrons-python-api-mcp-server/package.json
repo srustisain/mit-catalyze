@@ -1,0 +1,29 @@
+{
+  "name": "opentrons-python-api-mcp-server",
+  "version": "0.1.0",
+  "description": "MCP server for Opentrons Python API v2 documentation",
+  "license": "MIT",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "opentrons-python-api-mcp-server": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "tsx src/index.ts",
+    "dev": "tsx watch src/index.ts"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.15.0",
+    "cheerio": "^1.0.0",
+    "better-sqlite3": "^11.0.0",
+    "axios": "^1.7.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.12",
+    "@types/better-sqlite3": "^7.6.0",
+    "tsx": "^4.20.3",
+    "typescript": "^5.8.3"
+  }
+}
+
